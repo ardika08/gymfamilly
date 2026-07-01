@@ -8,6 +8,7 @@ use App\Models\Membership;
 use App\Services\DuitkuService;
 use App\Services\MembershipService;
 use App\Services\StarsenderService;
+use App\Services\VoucherService;
 use App\Services\WhatsAppTemplateService;
 use App\Support\ApiResponse;
 use App\Support\GymPayload;
@@ -21,6 +22,7 @@ class DuitkuController extends Controller
         private readonly MembershipService $memberships,
         private readonly StarsenderService $starsender,
         private readonly WhatsAppTemplateService $templates,
+        private readonly VoucherService $vouchers,
     ) {}
 
     /**
@@ -30,8 +32,9 @@ class DuitkuController extends Controller
     public function checkout(Request $request)
     {
         $validated = $request->validate([
-            'packageId' => ['required', 'exists:packages,id'],
+            'packageId'    => ['required', 'exists:packages,id'],
             'paymentMethod' => ['required', 'string', 'max:5'],
+            'voucherKode'  => ['nullable', 'string', 'max:50'],
         ]);
 
         if (!$this->duitku->isConfigured()) {
@@ -51,18 +54,41 @@ class DuitkuController extends Controller
         }
 
         $package = GymPackage::findOrFail($validated['packageId']);
-        $amount = $package->harga_promo ?? $package->harga_normal;
+        $harga   = $package->harga_promo ?? $package->harga_normal;
+
+        // Validasi voucher jika ada
+        $voucherId     = null;
+        $voucherDiskon = 0;
+        $vResult       = null;
+
+        if (!empty($validated['voucherKode'])) {
+            $vResult = $this->vouchers->validate($validated['voucherKode'], $request->user()->id, $harga);
+            if (!$vResult['valid']) {
+                return ApiResponse::error($vResult['message'], 422);
+            }
+            $voucherId     = $vResult['voucher']->id;
+            $voucherDiskon = $vResult['diskon'];
+        }
+
+        $amount = max(1000, $harga - $voucherDiskon); // minimum Rp 1.000 utk Duitku
 
         // Buat membership dengan status menunggu
         $membership = Membership::create([
-            'user_id' => $request->user()->id,
-            'package_id' => $package->id,
-            'status' => 'menunggu_pembayaran',
+            'user_id'        => $request->user()->id,
+            'package_id'     => $package->id,
+            'status'         => 'menunggu_pembayaran',
             'payment_method' => 'duitku',
             'payment_channel' => $validated['paymentMethod'],
+            'voucher_id'     => $voucherId,
+            'voucher_diskon' => $voucherDiskon,
         ]);
 
         $membership->load(['user', 'package']);
+
+        // Catat pemakaian voucher
+        if ($voucherId && $vResult) {
+            $this->vouchers->recordUsage($vResult['voucher'], $request->user()->id, $membership->id);
+        }
 
         // Buat transaksi di Duitku
         $result = $this->duitku->createTransaction(

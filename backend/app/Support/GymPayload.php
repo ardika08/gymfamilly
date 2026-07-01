@@ -41,6 +41,8 @@ class GymPayload
             'payment_proof' => $membership->payment_proof
                 ? Storage::disk('public')->url($membership->payment_proof)
                 : null,
+            'voucher_id'     => $membership->voucher_id,
+            'voucher_diskon' => $membership->voucher_diskon,
         ];
     }
 

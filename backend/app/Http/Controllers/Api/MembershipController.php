@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\GymPackage;
 use App\Models\Membership;
 use App\Models\User;
 use App\Services\MembershipService;
+use App\Services\VoucherService;
 use App\Support\ApiResponse;
 use App\Support\GymPayload;
 use Illuminate\Http\Request;
@@ -13,7 +15,10 @@ use Illuminate\Support\Facades\Storage;
 
 class MembershipController extends Controller
 {
-    public function __construct(private readonly MembershipService $memberships) {}
+    public function __construct(
+        private readonly MembershipService $memberships,
+        private readonly VoucherService $vouchers,
+    ) {}
 
     public function listForMember(Request $request)
     {
@@ -38,8 +43,9 @@ class MembershipController extends Controller
     public function checkout(Request $request)
     {
         $validated = $request->validate([
-            'packageId' => ['required', 'exists:packages,id'],
+            'packageId'     => ['required', 'exists:packages,id'],
             'paymentMethod' => ['nullable', 'string', 'max:255'],
+            'voucherKode'   => ['nullable', 'string', 'max:50'],
         ]);
 
         if ($this->memberships->hasActiveMembership($request->user())) {
@@ -54,12 +60,35 @@ class MembershipController extends Controller
             return ApiResponse::error('Masih ada membership yang menunggu verifikasi pembayaran.', 422);
         }
 
+        $package = GymPackage::findOrFail($validated['packageId']);
+        $harga   = $package->harga_promo ?? $package->harga_normal;
+
+        // Validasi voucher jika ada
+        $voucherId   = null;
+        $voucherDiskon = 0;
+
+        if (!empty($validated['voucherKode'])) {
+            $vResult = $this->vouchers->validate($validated['voucherKode'], $request->user()->id, $harga);
+            if (!$vResult['valid']) {
+                return ApiResponse::error($vResult['message'], 422);
+            }
+            $voucherId     = $vResult['voucher']->id;
+            $voucherDiskon = $vResult['diskon'];
+        }
+
         $membership = Membership::create([
-            'user_id' => $request->user()->id,
-            'package_id' => $validated['packageId'],
-            'status' => 'menunggu_pembayaran',
+            'user_id'        => $request->user()->id,
+            'package_id'     => $validated['packageId'],
+            'status'         => 'menunggu_pembayaran',
             'payment_method' => $validated['paymentMethod'] ?? 'BCA Manual',
+            'voucher_id'     => $voucherId,
+            'voucher_diskon' => $voucherDiskon,
         ]);
+
+        // Catat pemakaian voucher
+        if ($voucherId) {
+            $this->vouchers->recordUsage($vResult['voucher'], $request->user()->id, $membership->id);
+        }
 
         return ApiResponse::success(GymPayload::membership($membership), 'Checkout membership berhasil dibuat.', 201);
     }

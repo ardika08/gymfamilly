@@ -377,6 +377,7 @@ export const membershipService = {
     const checkout = await apiPost<Membership>('/api/membership/checkout', {
       packageId: input.packageId,
       paymentMethod: input.paymentMethod,
+      voucherKode: input.voucherKode,
     });
 
     const formData = new FormData();
@@ -394,7 +395,7 @@ export const membershipService = {
 };
 
 export const duitkuService = {
-  async checkout(packageId: number, paymentMethod: string) {
+  async checkout(packageId: number, paymentMethod: string, voucherKode?: string) {
     return apiPost<{
       membership: Membership;
       payment_url: string | null;
@@ -402,7 +403,7 @@ export const duitkuService = {
       qr_string: string | null;
       reference: string | null;
       amount: number;
-    }>('/api/membership/duitku/checkout', { packageId, paymentMethod });
+    }>('/api/membership/duitku/checkout', { packageId, paymentMethod, voucherKode });
   },
   async getPaymentMethods(amount: number) {
     return apiGet<
@@ -525,6 +526,24 @@ export const adminService = {
   },
   async adminProfile() {
     return apiGet<User>('/api/admin/profile');
+  },
+};
+
+export const voucherService = {
+  async check(kode: string, packageId: number) {
+    return apiPost<import('../types/models').VoucherCheckResult>('/api/voucher/check', { kode, package_id: packageId });
+  },
+  async list() {
+    return apiGet<import('../types/models').Voucher[]>('/api/admin/vouchers');
+  },
+  async create(data: Omit<import('../types/models').Voucher, 'id' | 'total_digunakan' | 'created_at'>) {
+    return apiPost<import('../types/models').Voucher>('/api/admin/vouchers', data);
+  },
+  async update(id: number, data: Omit<import('../types/models').Voucher, 'id' | 'total_digunakan' | 'created_at'>) {
+    return apiPut<import('../types/models').Voucher>(`/api/admin/vouchers/${id}`, data);
+  },
+  async remove(id: number) {
+    return apiDelete(`/api/admin/vouchers/${id}`);
   },
 };
 

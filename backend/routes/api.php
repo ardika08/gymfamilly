@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\InternalNotificationController;
 use App\Http\Controllers\Api\MembershipController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\PackageController;
+use App\Http\Controllers\Api\VoucherController;
 use App\Http\Controllers\Api\WebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,6 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
 
     Route::middleware('role:member')->group(function () {
+        Route::post('/voucher/check', [VoucherController::class, 'check']);
         Route::get('/member/memberships', [MembershipController::class, 'listForMember']);
         Route::get('/member/memberships/current', [MembershipController::class, 'currentForMember']);
         Route::post('/membership/checkout', [MembershipController::class, 'checkout']);
@@ -61,5 +63,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/admin/scan/barcode', [AttendanceController::class, 'scan']);
         Route::get('/admin/messages', [MessageController::class, 'adminMessages']);
         Route::post('/messages/reply', [MessageController::class, 'reply']);
+        Route::get('/admin/vouchers', [VoucherController::class, 'index']);
+        Route::post('/admin/vouchers', [VoucherController::class, 'store']);
+        Route::put('/admin/vouchers/{voucher}', [VoucherController::class, 'update']);
+        Route::delete('/admin/vouchers/{voucher}', [VoucherController::class, 'destroy']);
     });
 });

@@ -11,8 +11,9 @@ import {
   membershipService,
   packageService,
   paymentMethodService,
+  voucherService,
 } from '../../services/api';
-import type { GymPackage, Membership, PaymentMethodSetting } from '../../types/models';
+import type { GymPackage, Membership, PaymentMethodSetting, VoucherCheckResult } from '../../types/models';
 import { formatDisplayDate } from '../../utils/date';
 
 const isImageProof = (value?: string | null) =>
@@ -38,6 +39,14 @@ export const MemberPaymentsPage = () => {
   const [duitkuMethods, setDuitkuMethods] = useState<{ paymentMethod: string; paymentName: string; paymentImage: string; totalFee: number }[]>([]);
   const [selectedDuitkuMethod, setSelectedDuitkuMethod] = useState('');
   const [duitkuLoading, setDuitkuLoading] = useState(false);
+  const [voucherKode, setVoucherKode] = useState('');
+  const [voucherResult, setVoucherResult] = useState<VoucherCheckResult | null>(null);
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [voucherError, setVoucherError] = useState('');
+  const [manualVoucherKode, setManualVoucherKode] = useState('');
+  const [manualVoucherResult, setManualVoucherResult] = useState<VoucherCheckResult | null>(null);
+  const [manualVoucherLoading, setManualVoucherLoading] = useState(false);
+  const [manualVoucherError, setManualVoucherError] = useState('');
   const packageQuery = searchParams.get('package');
   usePageTitle('Pembayaran');
 
@@ -56,6 +65,16 @@ export const MemberPaymentsPage = () => {
     });
     paymentMethodService.list().then(setPaymentMethods);
   }, [packageQuery]);
+
+  // Reset voucher ketika paket berubah
+  useEffect(() => {
+    setVoucherKode('');
+    setVoucherResult(null);
+    setVoucherError('');
+    setManualVoucherKode('');
+    setManualVoucherResult(null);
+    setManualVoucherError('');
+  }, [selectedPackage]);
 
   // Load Duitku payment methods ketika paket berubah
   useEffect(() => {
@@ -116,6 +135,21 @@ export const MemberPaymentsPage = () => {
     window.setTimeout(() => setCopySuccess(''), 2400);
   };
 
+  const handleCheckVoucher = async (kode: string, setter: typeof setVoucherResult, errSetter: typeof setVoucherError, loadSetter: typeof setVoucherLoading) => {
+    if (!kode.trim() || !selectedPackage) return;
+    loadSetter(true);
+    errSetter('');
+    setter(null);
+    try {
+      const result = await voucherService.check(kode.trim(), Number(selectedPackage));
+      setter(result);
+    } catch (err) {
+      errSetter(err instanceof Error ? err.message : 'Kode voucher tidak valid.');
+    } finally {
+      loadSetter(false);
+    }
+  };
+
   const handleDuitkuCheckout = async () => {
     if (hasActiveMembership) {
       setErrorMessage('Membership Anda masih aktif. Checkout baru belum diperbolehkan.');
@@ -130,7 +164,7 @@ export const MemberPaymentsPage = () => {
     setSuccess('');
 
     try {
-      const result = await duitkuService.checkout(Number(selectedPackage), selectedDuitkuMethod);
+      const result = await duitkuService.checkout(Number(selectedPackage), selectedDuitkuMethod, voucherResult?.kode);
 
       if (result.payment_url) {
         setSuccess('Transaksi berhasil dibuat. Anda akan diarahkan ke halaman pembayaran...');
@@ -171,6 +205,7 @@ export const MemberPaymentsPage = () => {
         packageId: Number(selectedPackage),
         paymentMethod,
         paymentProof,
+        voucherKode: manualVoucherResult?.kode,
       });
     } catch (error) {
       setSuccess('');
@@ -312,6 +347,41 @@ export const MemberPaymentsPage = () => {
                 </select>
                 <small>Virtual Account, QRIS, GoPay, OVO, dan lainnya tersedia.</small>
               </label>
+              {/* Voucher input - Duitku */}
+              <div className="field-span-2 voucher-input-row">
+                <label style={{marginBottom: 0}}>
+                  <span>Kode Voucher <small style={{fontWeight:'normal'}}>(opsional)</small></span>
+                  <div className="voucher-input-group">
+                    <input
+                      type="text"
+                      placeholder="Contoh: GYM20"
+                      value={voucherKode}
+                      onChange={(e) => { setVoucherKode(e.target.value.toUpperCase()); setVoucherResult(null); setVoucherError(''); }}
+                      disabled={hasActiveMembership}
+                    />
+                    <button
+                      type="button"
+                      className="button-filter"
+                      onClick={() => handleCheckVoucher(voucherKode, setVoucherResult, setVoucherError, setVoucherLoading)}
+                      disabled={voucherLoading || !voucherKode.trim() || hasActiveMembership}
+                    >
+                      {voucherLoading ? '...' : 'Pakai'}
+                    </button>
+                  </div>
+                </label>
+                {voucherError ? <p className="form-error">{voucherError}</p> : null}
+                {voucherResult ? (
+                  <div className="voucher-success-card">
+                    <strong>🎉 Voucher berhasil!</strong>
+                    <span>{voucherResult.deskripsi ?? voucherResult.kode}</span>
+                    <div className="voucher-discount-row">
+                      <span>Diskon: <strong>- Rp {voucherResult.diskon.toLocaleString('id-ID')}</strong></span>
+                      <span>Harga akhir: <strong>Rp {voucherResult.harga_akhir.toLocaleString('id-ID')}</strong></span>
+                      {voucherResult.bonus_days > 0 && <span>+{voucherResult.bonus_days} hari bonus</span>}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
               {success ? <p className="form-success field-span-2">{success}</p> : null}
               <div className="form-actions-row field-span-2">
                 <button
@@ -404,6 +474,41 @@ export const MemberPaymentsPage = () => {
                 </div>
               </div>
             ) : null}
+            {/* Voucher input - Manual */}
+            <div className="field-span-2 voucher-input-row">
+              <label style={{marginBottom: 0}}>
+                <span>Kode Voucher <small style={{fontWeight:'normal'}}>(opsional)</small></span>
+                <div className="voucher-input-group">
+                  <input
+                    type="text"
+                    placeholder="Contoh: GYM20"
+                    value={manualVoucherKode}
+                    onChange={(e) => { setManualVoucherKode(e.target.value.toUpperCase()); setManualVoucherResult(null); setManualVoucherError(''); }}
+                    disabled={hasActiveMembership}
+                  />
+                  <button
+                    type="button"
+                    className="button-filter"
+                    onClick={() => handleCheckVoucher(manualVoucherKode, setManualVoucherResult, setManualVoucherError, setManualVoucherLoading)}
+                    disabled={manualVoucherLoading || !manualVoucherKode.trim() || hasActiveMembership}
+                  >
+                    {manualVoucherLoading ? '...' : 'Pakai'}
+                  </button>
+                </div>
+              </label>
+              {manualVoucherError ? <p className="form-error">{manualVoucherError}</p> : null}
+              {manualVoucherResult ? (
+                <div className="voucher-success-card">
+                  <strong>🎉 Voucher berhasil!</strong>
+                  <span>{manualVoucherResult.deskripsi ?? manualVoucherResult.kode}</span>
+                  <div className="voucher-discount-row">
+                    <span>Diskon: <strong>- Rp {manualVoucherResult.diskon.toLocaleString('id-ID')}</strong></span>
+                    <span>Harga akhir: <strong>Rp {manualVoucherResult.harga_akhir.toLocaleString('id-ID')}</strong></span>
+                    {manualVoucherResult.bonus_days > 0 && <span>+{manualVoucherResult.bonus_days} hari bonus</span>}
+                  </div>
+                </div>
+              ) : null}
+            </div>
             <label className="field-span-2">
               <span>Upload Bukti Transfer</span>
               <input

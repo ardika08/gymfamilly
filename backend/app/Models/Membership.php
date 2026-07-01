@@ -23,6 +23,8 @@ class Membership extends Model
         'duitku_reference',
         'payment_channel',
         'paid_at',
+        'voucher_id',
+        'voucher_diskon',
     ];
 
     protected $casts = [

@@ -92,6 +92,7 @@ export interface PaymentReportInput {
   packageId: number;
   paymentMethod: string;
   paymentProof: File;
+  voucherKode?: string;
 }
 
 export interface RegisterInput {
@@ -99,6 +100,33 @@ export interface RegisterInput {
   email: string;
   whatsapp: string;
   password: string;
+}
+
+export type VoucherTipe = 'percent' | 'fixed' | 'free' | 'bonus_days';
+
+export interface Voucher {
+  id: number;
+  kode: string;
+  deskripsi?: string | null;
+  tipe: VoucherTipe;
+  nilai: number;
+  maks_penggunaan?: number | null;
+  maks_per_user: number;
+  valid_dari?: string | null;
+  valid_hingga?: string | null;
+  status: 'aktif' | 'nonaktif';
+  total_digunakan: number;
+  created_at?: string | null;
+}
+
+export interface VoucherCheckResult {
+  kode: string;
+  tipe: VoucherTipe;
+  nilai: number;
+  diskon: number;
+  harga_akhir: number;
+  bonus_days: number;
+  deskripsi?: string | null;
 }
 
 export interface LoginInput {
