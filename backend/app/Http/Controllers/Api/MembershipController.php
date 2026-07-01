@@ -1,0 +1,111 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Membership;
+use App\Models\User;
+use App\Services\MembershipService;
+use App\Support\ApiResponse;
+use App\Support\GymPayload;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+
+class MembershipController extends Controller
+{
+    public function __construct(private readonly MembershipService $memberships) {}
+
+    public function listForMember(Request $request)
+    {
+        $items = $request->user()->memberships()->latest('id')->get()
+            ->map(fn (Membership $membership) => GymPayload::membership($membership));
+
+        return ApiResponse::success($items);
+    }
+
+    public function currentForMember(Request $request)
+    {
+        return ApiResponse::success(GymPayload::membership($this->memberships->currentForUser($request->user())));
+    }
+
+    public function currentForAdmin(int $userId)
+    {
+        $membership = $this->memberships->currentForUser(User::findOrFail($userId));
+
+        return ApiResponse::success(GymPayload::membership($membership));
+    }
+
+    public function checkout(Request $request)
+    {
+        $validated = $request->validate([
+            'packageId' => ['required', 'exists:packages,id'],
+            'paymentMethod' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if ($this->memberships->hasActiveMembership($request->user())) {
+            return ApiResponse::error('Membership aktif masih berjalan. Checkout baru belum diperbolehkan.', 422);
+        }
+
+        $latestPending = $request->user()->memberships()
+            ->where('status', 'menunggu_pembayaran')
+            ->latest('id')
+            ->first();
+
+        if ($latestPending && ! $latestPending->payment_proof) {
+            return ApiResponse::error('Masih ada checkout yang belum dilengkapi bukti pembayaran.', 422);
+        }
+
+        $membership = Membership::create([
+            'user_id' => $request->user()->id,
+            'package_id' => $validated['packageId'],
+            'status' => 'menunggu_pembayaran',
+            'payment_method' => $validated['paymentMethod'] ?? 'BCA Manual',
+        ]);
+
+        return ApiResponse::success(GymPayload::membership($membership), 'Checkout membership berhasil dibuat.', 201);
+    }
+
+    public function uploadProof(Request $request)
+    {
+        $validated = $request->validate([
+            'membershipId' => ['required', 'integer'],
+            'paymentMethod' => ['nullable', 'string', 'max:255'],
+            'payment_proof_file' => ['required', 'image', 'max:5120'],
+        ]);
+
+        $membership = $request->user()->memberships()
+            ->whereKey($validated['membershipId'])
+            ->first();
+
+        if (! $membership) {
+            return ApiResponse::error('Data membership tidak ditemukan.', 404);
+        }
+
+        $path = $request->file('payment_proof_file')->store('payment-proofs', 'public');
+
+        if ($membership->payment_proof) {
+            Storage::disk('public')->delete($membership->payment_proof);
+        }
+
+        $membership->update([
+            'payment_method' => $validated['paymentMethod'] ?? $membership->payment_method,
+            'payment_proof' => $path,
+        ]);
+
+        return ApiResponse::success(GymPayload::membership($membership->fresh()), 'Bukti pembayaran berhasil diunggah.');
+    }
+
+    public function barcode(Request $request)
+    {
+        $membership = $this->memberships->currentForUser($request->user());
+
+        if (! $membership || $membership->status !== 'aktif') {
+            return ApiResponse::success(null);
+        }
+
+        return ApiResponse::success([
+            'membership' => GymPayload::membership($membership),
+            'barcode' => $this->memberships->qrPayload($membership),
+        ]);
+    }
+}

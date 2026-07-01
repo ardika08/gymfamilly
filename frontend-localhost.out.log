@@ -1,0 +1,16 @@
+
+> gym-familly-frontend@0.0.0 dev:herd
+> vite --host 127.0.0.1 --port 5173
+
+
+  [32m[1mVITE[22m v7.3.3[39m  [2mready in [0m[1m169[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
+[2m21.46.23[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/member/MemberDashboardPage.tsx[22m
+[2m22.00.29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/context/AuthContext.tsx, /src/pages/admin/AdminDashboardPage.tsx, /src/pages/member/MemberBarcodePage.tsx, /src/pages/member/MemberPaymentsPage.tsx, /src/pages/admin/AdminPackagesPage.tsx, /src/pages/member/MemberAttendancePage.tsx, /src/pages/public/PublicPackagesPage.tsx, /src/pages/admin/AdminPaymentsPage.tsx, /src/pages/public/LandingPage.tsx, /src/pages/member/MemberMessagesPage.tsx, /src/pages/member/MemberDashboardPage.tsx, /src/pages/admin/AdminMembersPage.tsx, /src/pages/member/MemberPackagesPage.tsx, /src/pages/admin/AdminMessagesPage.tsx, /src/pages/admin/AdminScannerPage.tsx, /src/pages/admin/AdminAttendancePage.tsx[22m
+[2m22.01.43[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/admin/AdminPaymentsPage.tsx[22m
+[2m22.10.08[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m23.27.49[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m23.31.11[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m23.32.09[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m23.33.11[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/member/MemberPaymentsPage.tsx[22m
