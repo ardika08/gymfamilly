@@ -3,164 +3,90 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import { adminService, packageService, paymentMethodService } from '../../services/api';
-import type { GymPackage, Membership, PaymentMethodSetting, User } from '../../types/models';
+import { adminService, packageService } from '../../services/api';
+import type { GymPackage, Membership, User } from '../../types/models';
 import { formatDisplayDate } from '../../utils/date';
-
-const isImageProof = (value?: string | null) =>
-  Boolean(value && (value.startsWith('data:image/') || value.startsWith('/storage/') || value.startsWith('http')));
 
 export const AdminPaymentsPage = () => {
   const [payments, setPayments] = useState<Membership[]>([]);
   const [members, setMembers] = useState<User[]>([]);
   const [packages, setPackages] = useState<GymPackage[]>([]);
-  const [previewProof, setPreviewProof] = useState<{
-    src: string;
-    memberName: string;
-  } | null>(null);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodSetting[]>([]);
   const [successModal, setSuccessModal] = useState<{
     memberName: string;
     packageName: string;
     startDate: string;
     endDate: string;
   } | null>(null);
-  usePageTitle('Verifikasi Pembayaran');
+  const [filter, setFilter] = useState<'semua' | 'menunggu_pembayaran' | 'aktif' | 'kedaluwarsa'>('semua');
+  usePageTitle('Riwayat Pembayaran');
 
   const refresh = () => {
     adminService.payments().then(setPayments);
   };
 
-  const loadPaymentMethods = () => {
-    paymentMethodService.list().then(setPaymentMethods);
-  };
-
   useEffect(() => {
     adminService.members().then(setMembers);
     packageService.list().then(setPackages);
-    loadPaymentMethods();
     refresh();
   }, []);
 
-  useEffect(() => {
-    const reload = () => loadPaymentMethods();
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === paymentMethodService.events.dbKey) {
-        loadPaymentMethods();
-      }
-    };
+  const pendingCount = payments.filter((item) => item.status === 'menunggu_pembayaran').length;
+  const aktifCount = payments.filter((item) => item.status === 'aktif').length;
 
-    window.addEventListener(paymentMethodService.events.updated, reload);
-    window.addEventListener('storage', handleStorage);
-
-    return () => {
-      window.removeEventListener(paymentMethodService.events.updated, reload);
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, []);
-
-  const pendingCount = payments.filter(
-    (item) => item.status === 'menunggu_pembayaran',
-  ).length;
+  const filtered = filter === 'semua' ? payments : payments.filter((item) => item.status === filter);
 
   return (
     <div className="stack-lg">
       <PageHeader
         eyebrow="Pembayaran"
-        title="Verifikasi transfer manual"
-        description="Admin mengaktifkan membership setelah memeriksa bukti transfer dari member."
+        title="Riwayat transaksi Duitku"
+        description="Semua transaksi membership via Duitku — status diperbarui otomatis dari webhook."
       />
+
+      {/* Stats */}
       <section className="section-intro-card">
         <div>
           <small>Antrean pembayaran</small>
-          <strong>{pendingCount} butuh verifikasi</strong>
-          <p>Review bukti transfer, validasi paket, lalu aktifkan membership dari tabel ini.</p>
+          <strong>{pendingCount} menunggu konfirmasi</strong>
+          <p>Transaksi aktif otomatis setelah pembayaran berhasil dikonfirmasi Duitku.</p>
         </div>
         <div className="section-intro-meta">
-          <span>Total laporan</span>
-          <strong>{payments.length}</strong>
+          <span>Member aktif</span>
+          <strong>{aktifCount}</strong>
         </div>
       </section>
+
+      {/* Tabel transaksi */}
       <section className="panel">
         <div className="panel-toolbar">
           <div>
-            <h3>Nomor rekening tujuan</h3>
-            <p>Ubah rekening per metode transfer agar langsung tampil di halaman member.</p>
+            <h3>Daftar transaksi</h3>
+            <p>Urutan terbaru di atas.</p>
           </div>
-          <span className="table-chip">Sinkron antar tab</span>
-        </div>
-        <div className="payment-account-grid">
-          {paymentMethods.map((method) => (
-            <div key={method.code} className="payment-account-card">
-              <div className="payment-account-heading">
-                <strong>{method.label}</strong>
-                <small>Metode transfer manual</small>
-              </div>
-              <label>
-                <span>Nomor Rekening</span>
-                <input
-                  type="text"
-                  value={method.accountNumber}
-                  placeholder="Contoh: 1234567890"
-                  onChange={(event) =>
-                    setPaymentMethods((current) =>
-                      current.map((item) =>
-                        item.code === method.code
-                          ? { ...item, accountNumber: event.target.value }
-                          : item,
-                      ),
-                    )
-                  }
-                />
-              </label>
-              <label>
-                <span>Nama Pemilik Rekening</span>
-                <input
-                  type="text"
-                  value={method.accountName ?? ''}
-                  placeholder="Contoh: Gym Familly"
-                  onChange={(event) =>
-                    setPaymentMethods((current) =>
-                      current.map((item) =>
-                        item.code === method.code
-                          ? { ...item, accountName: event.target.value }
-                          : item,
-                      ),
-                    )
-                  }
-                />
-              </label>
-            </div>
-          ))}
-        </div>
-        <div className="form-actions-row payment-account-actions">
-          <button
-            type="button"
-            className="button-primary"
-            onClick={async () => {
-              const saved = await paymentMethodService.save(paymentMethods);
-              setPaymentMethods(saved);
-            }}
-          >
-            Simpan Rekening
-          </button>
-          <span className="form-helper-note">
-            Member akan melihat rekening ini sesuai metode pembayaran yang dipilih.
-          </span>
-        </div>
-      </section>
-      <section className="panel">
-        <div className="panel-toolbar">
-          <div>
-            <h3>Daftar pembayaran member</h3>
-            <p>Urutan terbaru muncul di bagian atas.</p>
+          <div className="inline-actions">
+            {(['semua', 'menunggu_pembayaran', 'aktif', 'kedaluwarsa'] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={`button-filter ${filter === f ? 'active' : ''}`}
+                onClick={() => setFilter(f)}
+              >
+                {f === 'semua'
+                  ? `Semua (${payments.length})`
+                  : f === 'menunggu_pembayaran'
+                    ? `Menunggu (${pendingCount})`
+                    : f === 'aktif'
+                      ? `Aktif (${aktifCount})`
+                      : `Kadaluarsa (${payments.filter((p) => p.status === 'kedaluwarsa').length})`}
+              </button>
+            ))}
           </div>
-          <span className="table-chip">Verifikasi manual</span>
         </div>
-        {payments.length === 0 ? (
+
+        {filtered.length === 0 ? (
           <EmptyState
-            title="Belum ada pembayaran"
-            description="Laporan pembayaran dari member akan muncul di sini."
+            title="Tidak ada transaksi"
+            description="Transaksi yang sesuai filter akan muncul di sini."
           />
         ) : (
           <div className="table-wrap premium-table-wrap">
@@ -171,75 +97,90 @@ export const AdminPaymentsPage = () => {
                   <th>Paket</th>
                   <th>Status</th>
                   <th>Metode</th>
-                  <th>Bukti</th>
+                  <th>Voucher</th>
+                  <th>Mulai</th>
+                  <th>Expired</th>
                   <th>Aksi</th>
                 </tr>
               </thead>
               <tbody>
-                {payments.map((item) => {
-                  const member = members.find((entry) => entry.id === item.user_id);
-                  const pkg = packages.find((entry) => entry.id === item.package_id);
+                {filtered.map((item) => {
+                  const member = members.find((u) => u.id === item.user_id);
+                  const pkg = packages.find((p) => p.id === item.package_id);
+                  const hasDiskon = (item as any).voucher_diskon > 0;
+
                   return (
                     <tr key={item.id}>
                       <td>
                         <div className="table-primary">
                           <strong>{member?.nama ?? '-'}</strong>
-                          <small>{member?.email ?? 'Email belum tersedia'}</small>
+                          <small>{member?.email ?? '-'}</small>
                         </div>
                       </td>
                       <td>
                         <div className="table-primary">
                           <strong>{pkg?.nama_paket ?? '-'}</strong>
-                          <small>{pkg?.deskripsi ?? 'Paket membership'}</small>
+                          <small>
+                            Rp {((pkg?.harga_promo ?? pkg?.harga_normal) ?? 0).toLocaleString('id-ID')}
+                          </small>
                         </div>
                       </td>
                       <td>
                         <StatusBadge status={item.status} />
                       </td>
                       <td>
-                        <span className="table-chip subtle">{item.payment_method ?? '-'}</span>
+                        <span className="table-chip subtle">
+                          {item.payment_method === 'duitku'
+                            ? `Duitku${item.payment_channel ? ` · ${item.payment_channel}` : ''}`
+                            : (item.payment_method ?? '-')}
+                        </span>
                       </td>
                       <td>
-                        {isImageProof(item.payment_proof) ? (
-                          <button
-                            type="button"
-                            className="table-proof-preview button-reset"
-                            onClick={() =>
-                              setPreviewProof({
-                                src: item.payment_proof ?? '',
-                                memberName: member?.nama ?? 'Member',
-                              })
-                            }
-                          >
-                            <img
-                              src={item.payment_proof ?? ''}
-                              alt={`Bukti transfer ${member?.nama ?? 'member'}`}
-                              className="table-proof-image"
-                            />
-                            <small>Bukti gambar</small>
-                          </button>
+                        {hasDiskon ? (
+                          <div className="table-primary">
+                            <strong style={{ color: '#16a34a' }}>
+                              - Rp {(item as any).voucher_diskon.toLocaleString('id-ID')}
+                            </strong>
+                            <small>Diskon voucher</small>
+                          </div>
                         ) : (
-                          <code className="proof-code">{item.payment_proof ?? '-'}</code>
+                          <span className="table-chip subtle" style={{ opacity: 0.4 }}>—</span>
                         )}
                       </td>
                       <td>
-                        <button
-                          type="button"
-                          className="table-action-button"
-                          disabled={item.status === 'aktif'}
-                          onClick={async () => {
-                            const verified = await adminService.verifyPayment(item.id);
-                            setSuccessModal({
-                              memberName: member?.nama ?? 'Member',
-                              packageName: pkg?.nama_paket ?? 'Membership Gym Familly',
-                              startDate: formatDisplayDate(verified.tanggal_mulai),
-                              endDate: formatDisplayDate(verified.tanggal_berakhir),
-                            });
-                            refresh();
-                          }}
-                        >
-                          {item.status === 'aktif' ? 'Sudah Aktif' : 'Verifikasi'}
-                        </button>
+                        <div className="finance-table-period">
+                          <strong>{formatDisplayDate(item.tanggal_mulai)}</strong>
+                          <small>{item.tanggal_mulai ? 'Mulai aktif' : 'Belum aktif'}</small>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="finance-table-period">
+                          <strong>{formatDisplayDate(item.tanggal_berakhir)}</strong>
+                          <small>{item.tanggal_berakhir ? 'Batas akhir' : '—'}</small>
+                        </div>
+                      </td>
+                      <td>
+                        {item.status === 'menunggu_pembayaran' ? (
+                          <button
+                            type="button"
+                            className="table-action-button"
+                            title="Aktifkan manual jika webhook Duitku gagal"
+                            onClick={async () => {
+                              const verified = await adminService.verifyPayment(item.id);
+                              setSuccessModal({
+                                memberName: member?.nama ?? 'Member',
+                                packageName: pkg?.nama_paket ?? 'Membership',
+                                startDate: formatDisplayDate(verified.tanggal_mulai),
+                                endDate: formatDisplayDate(verified.tanggal_berakhir),
+                              });
+                              refresh();
+                            }}
+                          >
+                            Aktifkan
+                          </button>
+                        ) : (
+                          <span className="table-chip subtle" style={{ opacity: 0.4 }}>—</span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -249,39 +190,17 @@ export const AdminPaymentsPage = () => {
           </div>
         )}
       </section>
-      {previewProof ? (
-        <div className="proof-modal-overlay" onClick={() => setPreviewProof(null)}>
-          <div className="proof-modal-card" onClick={(event) => event.stopPropagation()}>
-            <div className="panel-toolbar">
-              <div>
-                <h3>Preview bukti transfer</h3>
-                <p>{previewProof.memberName}</p>
-              </div>
-              <button
-                type="button"
-                className="button-filter"
-                onClick={() => setPreviewProof(null)}
-              >
-                Tutup
-              </button>
-            </div>
-            <img
-              src={previewProof.src}
-              alt={`Preview bukti transfer ${previewProof.memberName}`}
-              className="proof-modal-image"
-            />
-          </div>
-        </div>
-      ) : null}
+
+      {/* Success modal */}
       {successModal ? (
         <div className="proof-modal-overlay">
-          <div className="proof-modal-card success-modal-card" onClick={(event) => event.stopPropagation()}>
-            <div className="success-modal-badge">Verifikasi Berhasil</div>
+          <div
+            className="proof-modal-card success-modal-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="success-modal-badge">Membership Diaktifkan</div>
             <h3>Status member sudah aktif</h3>
-            <p>
-              Pembayaran berhasil diverifikasi. Member sekarang sudah bisa memakai barcode
-              untuk check-in di Gym Familly.
-            </p>
+            <p>Membership berhasil diaktifkan secara manual.</p>
             <div className="mini-metric-grid">
               <div className="mini-metric">
                 <span>Member</span>
