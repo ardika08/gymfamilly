@@ -12,20 +12,27 @@ const currency = new Intl.NumberFormat('id-ID', {
   maximumFractionDigits: 0,
 });
 
+interface TrendData {
+  visitTrend: { date: string; count: number }[];
+  revenueTrend: { month: string; revenue: number }[];
+}
+
 export const AdminDashboardPage = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [expiringMembers, setExpiringMembers] = useState<
     { member: User; membership: Membership | null }[]
   >([]);
+  const [trends, setTrends] = useState<TrendData | null>(null);
   usePageTitle('Dashboard Admin');
 
   useEffect(() => {
     adminService.dashboardSummary().then(setSummary);
     adminService.expiringMembers().then(setExpiringMembers);
+    adminService.trends().then(setTrends);
   }, []);
 
-  const visitTrend = [42, 74, 61, 102, 84, 96, 126, 78, 108, 72];
-  const trendDots = [36, 78, 52, 42, 112, 58, 90, 126];
+  const visitTrend = trends?.visitTrend.map((d) => d.count) ?? [];
+  const trendDots = trends?.revenueTrend.map((d) => d.revenue) ?? [];
 
   return (
     <div className="stack-lg">
@@ -35,7 +42,29 @@ export const AdminDashboardPage = () => {
           <h2>Ringkasan operasional gym.</h2>
           <p>Pantau pembayaran, member aktif, dan kunjungan dari satu layar.</p>
         </div>
-        <button type="button" className="button-light">
+        <button
+          type="button"
+          className="button-light"
+          onClick={() => {
+            if (!summary) return;
+            const rows = [
+              ['Metrik', 'Nilai'],
+              ['Member Aktif', String(summary.activeMembers)],
+              ['Pembayaran Pending', String(summary.pendingPayments)],
+              ['Pendapatan', currency.format(summary.monthlyRevenue)],
+              ['Check-in Hari Ini', String(summary.attendanceToday)],
+              ['Reminder H-3', String(summary.expiringSoonCount)],
+            ];
+            const csv = rows.map((r) => r.join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ringkasan-gym-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
           Export ringkasan
         </button>
       </section>

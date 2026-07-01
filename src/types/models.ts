@@ -11,7 +11,6 @@ export interface User {
   id: number;
   nama: string;
   email: string;
-  password: string;
   role: Role;
   whatsapp: string;
   account_status: AccountStatus;
@@ -25,6 +24,7 @@ export interface GymPackage {
   harga_normal: number;
   harga_promo?: number | null;
   deskripsi: string;
+  durasi_hari: number;
 }
 
 export interface Membership {

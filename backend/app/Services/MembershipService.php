@@ -50,27 +50,17 @@ class MembershipService
         return Carbon::today()->diffInDays(Carbon::parse($membership->tanggal_berakhir), false);
     }
 
-    public function calculateEndDate(string $packageName): string
+    /**
+     * Hitung tanggal berakhir berdasarkan kolom durasi_hari di package.
+     * Menerima GymPackage object atau jumlah hari langsung.
+     */
+    public function calculateEndDate(\App\Models\GymPackage|int $package): string
     {
-        $endDate = Carbon::today();
+        $days = $package instanceof \App\Models\GymPackage
+            ? $package->durasi_hari
+            : $package;
 
-        if (str_contains($packageName, '12 Bulan')) {
-            return $endDate->addMonths(12)->format('Y-m-d');
-        }
-
-        if (str_contains($packageName, '6 Bulan')) {
-            return $endDate->addMonths(6)->format('Y-m-d');
-        }
-
-        if (str_contains($packageName, '3 Bulan')) {
-            return $endDate->addMonths(3)->format('Y-m-d');
-        }
-
-        if (str_contains($packageName, 'Harian')) {
-            return $endDate->addDay()->format('Y-m-d');
-        }
-
-        return $endDate->addMonth()->format('Y-m-d');
+        return Carbon::today()->addDays($days)->format('Y-m-d');
     }
 
     public function qrPayload(Membership $membership): string

@@ -25,25 +25,31 @@ class AdminController extends Controller
 
     public function dashboard()
     {
-        $memberUsers = User::query()->where('role', 'member')->get();
-        $activeMemberships = $memberUsers
-            ->map(fn (User $user) => $this->memberships->currentForUser($user))
-            ->filter(fn (?Membership $membership) => $membership?->status === 'aktif');
+        $today = Carbon::today();
 
-        $monthlyRevenue = $activeMemberships->sum(function (Membership $membership) {
-            $membership->loadMissing('package');
+        $activeMembers = Membership::where('status', 'aktif')
+            ->whereDate('tanggal_berakhir', '>=', $today)
+            ->distinct('user_id')
+            ->count('user_id');
 
-            return $membership->package->harga_promo ?? $membership->package->harga_normal;
-        });
+        $monthlyRevenue = Membership::where('status', 'aktif')
+            ->whereDate('tanggal_berakhir', '>=', $today)
+            ->join('packages', 'memberships.package_id', '=', 'packages.id')
+            ->selectRaw('SUM(COALESCE(packages.harga_promo, packages.harga_normal)) as total')
+            ->value('total') ?? 0;
+
+        $expiringSoonCount = Membership::where('status', 'aktif')
+            ->whereDate('tanggal_berakhir', '>=', $today)
+            ->whereDate('tanggal_berakhir', '<=', $today->copy()->addDays(3))
+            ->distinct('user_id')
+            ->count('user_id');
 
         return ApiResponse::success([
-            'activeMembers' => $activeMemberships->count(),
+            'activeMembers' => $activeMembers,
             'pendingPayments' => Membership::where('status', 'menunggu_pembayaran')->count(),
-            'monthlyRevenue' => $monthlyRevenue,
-            'attendanceToday' => Attendance::whereDate('waktu_scan', Carbon::today())->where('hasil', 'berhasil')->count(),
-            'expiringSoonCount' => $memberUsers->filter(
-                fn (User $user) => $this->memberships->isExpiringSoon($this->memberships->currentForUser($user))
-            )->count(),
+            'monthlyRevenue' => (int) $monthlyRevenue,
+            'attendanceToday' => Attendance::whereDate('waktu_scan', $today)->where('hasil', 'berhasil')->count(),
+            'expiringSoonCount' => $expiringSoonCount,
         ]);
     }
 
@@ -54,6 +60,11 @@ class AdminController extends Controller
                 fn (User $user) => GymPayload::user($user)
             )
         );
+    }
+
+    public function adminProfile(Request $request)
+    {
+        return ApiResponse::success(GymPayload::user($request->user()));
     }
 
     public function updateMember(Request $request, User $member)
@@ -86,10 +97,21 @@ class AdminController extends Controller
         return ApiResponse::success(GymPayload::user($member), 'Status akun member berhasil diperbarui.');
     }
 
-    public function payments()
+    public function payments(Request $request)
     {
+        $query = Membership::query()->latest('id');
+
+        if ($request->has('per_page')) {
+            $paginated = $query->paginate((int) $request->input('per_page', 20));
+            $paginated->getCollection()->transform(
+                fn (Membership $membership) => GymPayload::membership($membership)
+            );
+
+            return ApiResponse::success($paginated);
+        }
+
         return ApiResponse::success(
-            Membership::query()->latest('id')->get()->map(
+            $query->get()->map(
                 fn (Membership $membership) => GymPayload::membership($membership)
             )
         );
@@ -105,7 +127,7 @@ class AdminController extends Controller
         $membership->update([
             'status' => 'aktif',
             'tanggal_mulai' => now()->format('Y-m-d'),
-            'tanggal_berakhir' => $this->memberships->calculateEndDate($membership->package->nama_paket),
+            'tanggal_berakhir' => $this->memberships->calculateEndDate($membership->package),
             'verified_at' => now(),
         ]);
 
@@ -147,6 +169,45 @@ class AdminController extends Controller
     public function expenses()
     {
         return ApiResponse::success(Expense::query()->latest('tanggal')->get());
+    }
+
+    public function trends()
+    {
+        $today = Carbon::today();
+
+        // Attendance per hari (10 hari terakhir)
+        $visitTrend = collect(range(9, 0))->map(function ($daysAgo) use ($today) {
+            $date = $today->copy()->subDays($daysAgo);
+
+            return [
+                'date' => $date->format('d/m'),
+                'count' => Attendance::whereDate('waktu_scan', $date)
+                    ->where('hasil', 'berhasil')
+                    ->count(),
+            ];
+        })->values();
+
+        // Revenue per bulan (8 bulan terakhir)
+        $revenueTrend = collect(range(7, 0))->map(function ($monthsAgo) use ($today) {
+            $month = $today->copy()->subMonths($monthsAgo);
+
+            $revenue = Membership::where('status', 'aktif')
+                ->whereMonth('verified_at', $month->month)
+                ->whereYear('verified_at', $month->year)
+                ->join('packages', 'memberships.package_id', '=', 'packages.id')
+                ->selectRaw('SUM(COALESCE(packages.harga_promo, packages.harga_normal)) as total')
+                ->value('total') ?? 0;
+
+            return [
+                'month' => $month->format('M'),
+                'revenue' => (int) $revenue,
+            ];
+        })->values();
+
+        return ApiResponse::success([
+            'visitTrend' => $visitTrend,
+            'revenueTrend' => $revenueTrend,
+        ]);
     }
 
     public function createExpense(Request $request)

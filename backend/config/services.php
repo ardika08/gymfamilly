@@ -39,6 +39,20 @@ return [
         'base_url' => env('STARSENDER_BASE_URL', 'https://api.starsender.online/api'),
         'api_key' => env('STARSENDER_API_KEY'),
         'device_id' => env('STARSENDER_DEVICE_ID'),
+        'webhook_secret' => env('STARSENDER_WEBHOOK_SECRET'),
+    ],
+
+    'duitku' => [
+        'merchant_code' => env('DUITKU_MERCHANT_CODE'),
+        'api_key' => env('DUITKU_API_KEY'),
+        'base_url' => env('DUITKU_BASE_URL', 'https://sandbox.duitku.com/webapi/api/merchant'),
+        'callback_url' => env('DUITKU_CALLBACK_URL'),
+        'return_url' => env('DUITKU_RETURN_URL'),
+        'expiry_period' => env('DUITKU_EXPIRY_MINUTES', 1440),
+    ],
+
+    'internal' => [
+        'secret' => env('INTERNAL_API_SECRET'),
     ],
 
 ];

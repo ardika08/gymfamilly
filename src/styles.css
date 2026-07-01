@@ -4287,3 +4287,15 @@ td {
     text-align: center;
   }
 }
+
+/* Payment Mode Toggle */
+.payment-mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.payment-mode-toggle .button-filter.active {
+  background: var(--color-primary, #ab182a);
+  color: #fff;
+  border-color: var(--color-primary, #ab182a);
+}

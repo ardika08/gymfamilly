@@ -46,13 +46,12 @@ class MembershipController extends Controller
             return ApiResponse::error('Membership aktif masih berjalan. Checkout baru belum diperbolehkan.', 422);
         }
 
-        $latestPending = $request->user()->memberships()
+        $anyPending = $request->user()->memberships()
             ->where('status', 'menunggu_pembayaran')
-            ->latest('id')
-            ->first();
+            ->exists();
 
-        if ($latestPending && ! $latestPending->payment_proof) {
-            return ApiResponse::error('Masih ada checkout yang belum dilengkapi bukti pembayaran.', 422);
+        if ($anyPending) {
+            return ApiResponse::error('Masih ada membership yang menunggu verifikasi pembayaran.', 422);
         }
 
         $membership = Membership::create([

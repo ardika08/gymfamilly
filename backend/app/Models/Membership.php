@@ -19,12 +19,17 @@ class Membership extends Model
         'payment_method',
         'payment_proof',
         'verified_at',
+        'merchant_order_id',
+        'duitku_reference',
+        'payment_channel',
+        'paid_at',
     ];
 
     protected $casts = [
         'tanggal_mulai' => 'date:Y-m-d',
         'tanggal_berakhir' => 'date:Y-m-d',
         'verified_at' => 'datetime',
+        'paid_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

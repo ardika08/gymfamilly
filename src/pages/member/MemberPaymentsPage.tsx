@@ -6,6 +6,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge';
 import { useAuth } from '../../context/AuthContext';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import {
+  duitkuService,
   membershipHelpers,
   membershipService,
   packageService,
@@ -33,6 +34,10 @@ export const MemberPaymentsPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [showBlockedModal, setShowBlockedModal] = useState(false);
   const [currentMembership, setCurrentMembership] = useState<Membership | null>(null);
+  const [paymentMode, setPaymentMode] = useState<'manual' | 'online'>('online');
+  const [duitkuMethods, setDuitkuMethods] = useState<{ paymentMethod: string; paymentName: string; paymentImage: string; totalFee: number }[]>([]);
+  const [selectedDuitkuMethod, setSelectedDuitkuMethod] = useState('');
+  const [duitkuLoading, setDuitkuLoading] = useState(false);
   const packageQuery = searchParams.get('package');
   usePageTitle('Pembayaran');
 
@@ -51,6 +56,20 @@ export const MemberPaymentsPage = () => {
     });
     paymentMethodService.list().then(setPaymentMethods);
   }, [packageQuery]);
+
+  // Load Duitku payment methods ketika paket berubah
+  useEffect(() => {
+    if (!selectedPackage || paymentMode !== 'online') return;
+    const pkg = packages.find((p) => p.id === Number(selectedPackage));
+    if (!pkg) return;
+    const amount = pkg.harga_promo ?? pkg.harga_normal;
+    duitkuService.getPaymentMethods(amount).then((methods) => {
+      setDuitkuMethods(methods);
+      if (methods.length > 0 && !selectedDuitkuMethod) {
+        setSelectedDuitkuMethod(methods[0].paymentMethod);
+      }
+    }).catch(() => setDuitkuMethods([]));
+  }, [selectedPackage, packages, paymentMode]);
 
   useEffect(() => {
     refresh();
@@ -95,6 +114,42 @@ export const MemberPaymentsPage = () => {
     await navigator.clipboard.writeText(selectedPaymentMethod.accountNumber);
     setCopySuccess('Nomor rekening berhasil disalin.');
     window.setTimeout(() => setCopySuccess(''), 2400);
+  };
+
+  const handleDuitkuCheckout = async () => {
+    if (hasActiveMembership) {
+      setErrorMessage('Membership Anda masih aktif. Checkout baru belum diperbolehkan.');
+      setShowBlockedModal(true);
+      return;
+    }
+
+    if (!selectedPackage || !selectedDuitkuMethod) return;
+
+    setDuitkuLoading(true);
+    setErrorMessage('');
+    setSuccess('');
+
+    try {
+      const result = await duitkuService.checkout(Number(selectedPackage), selectedDuitkuMethod);
+
+      if (result.payment_url) {
+        setSuccess('Transaksi berhasil dibuat. Anda akan diarahkan ke halaman pembayaran...');
+        window.setTimeout(() => {
+          window.open(result.payment_url!, '_blank');
+        }, 1000);
+      } else {
+        setSuccess('Transaksi dibuat. Gunakan informasi berikut untuk menyelesaikan pembayaran.');
+      }
+
+      refresh();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Gagal membuat transaksi. Silakan coba lagi.',
+      );
+      setShowBlockedModal(true);
+    } finally {
+      setDuitkuLoading(false);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -171,9 +226,9 @@ export const MemberPaymentsPage = () => {
       ) : null}
 
       <PageHeader
-        eyebrow="Pembayaran Manual"
-        title="Kirim bukti transfer"
-        description="Pembayaran diverifikasi manual oleh admin."
+        eyebrow="Pembayaran"
+        title="Pilih metode pembayaran"
+        description="Bayar online (otomatis aktif) atau transfer manual (verifikasi admin)."
       />
 
       {hasActiveMembership ? (
@@ -193,6 +248,90 @@ export const MemberPaymentsPage = () => {
         </section>
       ) : null}
 
+      <div className="payment-mode-toggle">
+        <button
+          type="button"
+          className={`button-filter ${paymentMode === 'online' ? 'active' : ''}`}
+          onClick={() => setPaymentMode('online')}
+        >
+          💳 Bayar Online
+        </button>
+        <button
+          type="button"
+          className={`button-filter ${paymentMode === 'manual' ? 'active' : ''}`}
+          onClick={() => setPaymentMode('manual')}
+        >
+          🏦 Transfer Manual
+        </button>
+      </div>
+
+      {paymentMode === 'online' ? (
+        <section className="premium-form-shell">
+          <div className="premium-form-intro">
+            <span className="eyebrow">Pembayaran Online (Duitku)</span>
+            <h3>Bayar via VA, QRIS, atau e-wallet — membership langsung aktif otomatis.</h3>
+            <p>Pilih paket dan metode pembayaran, lalu klik tombol bayar. Anda akan diarahkan ke halaman pembayaran Duitku.</p>
+          </div>
+
+          <section className="panel premium-form-panel">
+            {packages.length === 0 ? (
+              <EmptyState title="Belum ada paket" description="Admin belum menambahkan paket membership." />
+            ) : null}
+            <div className="form-grid premium-form-grid">
+              <label>
+                <span>Pilih Paket</span>
+                <select
+                  value={selectedPackage}
+                  onChange={(e) => setSelectedPackage(e.target.value)}
+                  required
+                  disabled={hasActiveMembership || packages.length === 0}
+                >
+                  {packages.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.nama_paket} — Rp {(item.harga_promo ?? item.harga_normal).toLocaleString('id-ID')}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Metode Pembayaran</span>
+                <select
+                  value={selectedDuitkuMethod}
+                  onChange={(e) => setSelectedDuitkuMethod(e.target.value)}
+                  disabled={hasActiveMembership || duitkuMethods.length === 0}
+                >
+                  {duitkuMethods.length === 0 ? (
+                    <option value="">Memuat metode pembayaran...</option>
+                  ) : (
+                    duitkuMethods.map((m) => (
+                      <option key={m.paymentMethod} value={m.paymentMethod}>
+                        {m.paymentName} {m.totalFee > 0 ? `(+Rp ${m.totalFee.toLocaleString('id-ID')})` : ''}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <small>Virtual Account, QRIS, GoPay, OVO, dan lainnya tersedia.</small>
+              </label>
+              {success ? <p className="form-success field-span-2">{success}</p> : null}
+              <div className="form-actions-row field-span-2">
+                <button
+                  type="button"
+                  className="button-primary"
+                  onClick={handleDuitkuCheckout}
+                  disabled={duitkuLoading || hasActiveMembership || !selectedDuitkuMethod}
+                >
+                  {duitkuLoading ? 'Memproses...' : 'Bayar Sekarang'}
+                </button>
+                <span className="form-helper-note">
+                  Membership otomatis aktif setelah pembayaran berhasil dikonfirmasi.
+                </span>
+              </div>
+            </div>
+          </section>
+        </section>
+      ) : null}
+
+      {paymentMode === 'manual' ? (
       <section className="premium-form-shell">
         <div className="premium-form-intro">
           <span className="eyebrow">Alur pembayaran manual</span>
@@ -307,6 +446,7 @@ export const MemberPaymentsPage = () => {
           </form>
         </section>
       </section>
+      ) : null}
 
       <section className="panel">
         <div className="panel-toolbar">
