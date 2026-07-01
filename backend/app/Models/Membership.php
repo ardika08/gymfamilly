@@ -25,6 +25,7 @@ class Membership extends Model
         'paid_at',
         'voucher_id',
         'voucher_diskon',
+        'payment_url',
     ];
 
     protected $casts = [

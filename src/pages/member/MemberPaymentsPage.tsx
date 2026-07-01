@@ -355,6 +355,7 @@ export const MemberPaymentsPage = () => {
                   <th>Metode</th>
                   <th>Tanggal Mulai</th>
                   <th>Expired</th>
+                  <th>Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -399,6 +400,19 @@ export const MemberPaymentsPage = () => {
                                 : 'Belum aktif'}
                           </small>
                         </div>
+                      </td>
+                      <td>
+                        {item.status === 'menunggu_pembayaran' && item.payment_url ? (
+                          <button
+                            type="button"
+                            className="table-action-button"
+                            onClick={() => window.open(item.payment_url!, '_blank')}
+                          >
+                            Lanjutkan Bayar
+                          </button>
+                        ) : (
+                          <span className="table-chip subtle" style={{ opacity: 0.4 }}>—</span>
+                        )}
                       </td>
                     </tr>
                   );

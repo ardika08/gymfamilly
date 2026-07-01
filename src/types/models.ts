@@ -37,6 +37,9 @@ export interface Membership {
   status: MembershipStatus;
   payment_method?: string | null;
   payment_proof?: string | null;
+  payment_url?: string | null;
+  voucher_id?: number | null;
+  voucher_diskon?: number;
 }
 
 export interface PaymentMethodSetting {

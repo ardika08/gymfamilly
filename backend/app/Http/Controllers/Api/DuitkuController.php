@@ -107,7 +107,8 @@ class DuitkuController extends Controller
         // Update membership dengan data Duitku
         $membership->update([
             'merchant_order_id' => $result['merchant_order_id'],
-            'duitku_reference' => $result['reference'],
+            'duitku_reference'  => $result['reference'],
+            'payment_url'       => $result['payment_url'] ?? null,
         ]);
 
         return ApiResponse::success([
@@ -205,12 +206,13 @@ class DuitkuController extends Controller
         // resultCode '00' = sukses
         if ($resultCode === '00') {
             $membership->update([
-                'status' => 'aktif',
-                'tanggal_mulai' => now()->format('Y-m-d'),
+                'status'           => 'aktif',
+                'tanggal_mulai'    => now()->format('Y-m-d'),
                 'tanggal_berakhir' => $this->memberships->calculateEndDate($membership->package),
                 'duitku_reference' => $reference,
-                'verified_at' => now(),
-                'paid_at' => now(),
+                'verified_at'      => now(),
+                'paid_at'          => now(),
+                'payment_url'      => null, // hapus URL setelah bayar
             ]);
 
             // Kirim notifikasi WhatsApp ke member

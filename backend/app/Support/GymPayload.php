@@ -43,6 +43,7 @@ class GymPayload
                 : null,
             'voucher_id'     => $membership->voucher_id,
             'voucher_diskon' => $membership->voucher_diskon,
+            'payment_url'    => $membership->payment_url,
         ];
     }
 
