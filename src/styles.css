@@ -139,7 +139,7 @@ button {
 
 .primary-link,
 .button-primary {
-  background: #1f7a4d;
+  background: #ab182a;
   color: white;
   border: 0;
 }
@@ -148,8 +148,8 @@ button {
 .button-secondary,
 .ghost-button,
 .button-inline {
-  background: rgba(31, 122, 77, 0.09);
-  color: #185c3b;
+  background: rgba(171, 24, 42, 0.09);
+  color: #ab182a;
   border: 0;
 }
 
