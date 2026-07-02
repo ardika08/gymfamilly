@@ -16,6 +16,7 @@ export const AdminPackagesPage = () => {
     harga_normal: '',
     harga_promo: '',
     deskripsi: '',
+    durasi_hari: '',
   });
   usePageTitle('Kelola Paket');
 
@@ -35,6 +36,7 @@ export const AdminPackagesPage = () => {
       harga_normal: '',
       harga_promo: '',
       deskripsi: '',
+      durasi_hari: '',
     });
   };
 
@@ -47,6 +49,7 @@ export const AdminPackagesPage = () => {
       harga_normal: Number(form.harga_normal),
       harga_promo: form.harga_promo ? Number(form.harga_promo) : null,
       deskripsi: form.deskripsi,
+      durasi_hari: Number(form.durasi_hari),
     });
     resetForm();
     refresh();
@@ -129,6 +132,18 @@ export const AdminPackagesPage = () => {
               />
               <small>Contoh: Akses harian atau bonus fasilitas.</small>
             </label>
+            <label>
+              <span>Durasi Membership (hari)</span>
+              <input
+                value={form.durasi_hari}
+                onChange={(event) => setForm({ ...form, durasi_hari: event.target.value })}
+                type="number"
+                min="1"
+                placeholder="30"
+                required
+              />
+              <small>Berapa hari membership aktif setelah pembayaran berhasil.</small>
+            </label>
             <div className="form-actions-row field-span-2">
               <button type="submit" className="button-primary">
                 {editingPackageId ? 'Update Paket' : 'Simpan Paket'}
@@ -171,6 +186,7 @@ export const AdminPackagesPage = () => {
                           harga_normal: String(item.harga_normal),
                           harga_promo: item.harga_promo ? String(item.harga_promo) : '',
                           deskripsi: item.deskripsi,
+                          durasi_hari: String(item.durasi_hari ?? 30),
                         });
                         setOpenMenuId(null);
                         window.scrollTo({ top: 0, behavior: 'smooth' });

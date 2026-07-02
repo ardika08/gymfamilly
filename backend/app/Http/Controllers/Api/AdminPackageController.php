@@ -22,6 +22,7 @@ class AdminPackageController extends Controller
             'harga_normal' => ['required', 'integer', 'min:0'],
             'harga_promo' => ['nullable', 'integer', 'min:0'],
             'deskripsi' => ['required', 'string'],
+            'durasi_hari' => ['required', 'integer', 'min:1'],
         ]);
 
         $package = GymPackage::create($validated);
@@ -37,6 +38,7 @@ class AdminPackageController extends Controller
             'harga_normal' => ['required', 'integer', 'min:0'],
             'harga_promo' => ['nullable', 'integer', 'min:0'],
             'deskripsi' => ['required', 'string'],
+            'durasi_hari' => ['required', 'integer', 'min:1'],
         ]);
 
         $package->update($validated);
