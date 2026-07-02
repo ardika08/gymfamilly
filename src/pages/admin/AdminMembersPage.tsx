@@ -12,104 +12,90 @@ type MemberFilter = 'semua' | 'aktif' | 'segera_berakhir' | 'kedaluwarsa';
 export const AdminMembersPage = () => {
   const [members, setMembers] = useState<User[]>([]);
   const [memberships, setMemberships] = useState<Record<number, Membership | null>>({});
-  const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
-  const [formState, setFormState] = useState({
-    nama: '',
-    email: '',
-    whatsapp: '',
-  });
-  const [feedback, setFeedback] = useState<string | null>(null);
   const [memberFilter, setMemberFilter] = useState<MemberFilter>('semua');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Edit modal state
+  const [editTarget, setEditTarget] = useState<User | null>(null);
+  const [formState, setFormState] = useState({ nama: '', email: '', whatsapp: '' });
+  const [editFeedback, setEditFeedback] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Toggle status confirm modal
+  const [toggleTarget, setToggleTarget] = useState<User | null>(null);
+
   usePageTitle('Daftar Member');
 
   const loadMembers = async () => {
     const items = await adminService.members();
     setMembers(items);
-    setSelectedMemberId((current) => current ?? items[0]?.id ?? null);
     const entries = await Promise.all(
       items.map(async (member) => [member.id, await membershipService.currentByUser(member.id)] as const),
     );
     setMemberships(Object.fromEntries(entries));
   };
 
-  useEffect(() => {
-    loadMembers();
-  }, []);
-
-  const selectedMember = useMemo(
-    () => members.find((member) => member.id === selectedMemberId) ?? null,
-    [members, selectedMemberId],
-  );
+  useEffect(() => { loadMembers(); }, []);
 
   const expiringSoonMembers = useMemo(
-    () =>
-      members.filter((member) => membershipHelpers.isExpiringSoon(memberships[member.id] ?? null)),
+    () => members.filter((m) => membershipHelpers.isExpiringSoon(memberships[m.id] ?? null)),
     [members, memberships],
   );
 
   const filteredMembers = useMemo(() => {
-    return members.filter((member) => {
-      const membership = memberships[member.id] ?? null;
-      const expiringSoon = membershipHelpers.isExpiringSoon(membership);
+    return members
+      .filter((member) => {
+        const membership = memberships[member.id] ?? null;
+        const expiringSoon = membershipHelpers.isExpiringSoon(membership);
+        switch (memberFilter) {
+          case 'aktif': return membership?.status === 'aktif' && !expiringSoon;
+          case 'segera_berakhir': return expiringSoon;
+          case 'kedaluwarsa': return membership?.status === 'kedaluwarsa';
+          default: return true;
+        }
+      })
+      .filter((member) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+          member.nama.toLowerCase().includes(q) ||
+          member.email.toLowerCase().includes(q) ||
+          member.whatsapp.includes(q)
+        );
+      });
+  }, [memberFilter, searchQuery, members, memberships]);
 
-      switch (memberFilter) {
-        case 'aktif':
-          return membership?.status === 'aktif' && !expiringSoon;
-        case 'segera_berakhir':
-          return expiringSoon;
-        case 'kedaluwarsa':
-          return membership?.status === 'kedaluwarsa';
-        default:
-          return true;
-      }
-    });
-  }, [memberFilter, members, memberships]);
+  // Buka modal edit
+  const openEdit = (member: User) => {
+    setEditTarget(member);
+    setFormState({ nama: member.nama, email: member.email, whatsapp: member.whatsapp });
+    setEditFeedback('');
+  };
 
-  useEffect(() => {
-    if (!selectedMember) {
-      setFormState({ nama: '', email: '', whatsapp: '' });
-      return;
-    }
-
-    setFormState({
-      nama: selectedMember.nama,
-      email: selectedMember.email,
-      whatsapp: selectedMember.whatsapp,
-    });
-  }, [selectedMember]);
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!selectedMember) {
-      return;
-    }
-
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget) return;
+    setEditSaving(true);
+    setEditFeedback('');
     try {
-      const updated = await adminService.updateMember(selectedMember.id, formState);
-      setMembers((current) =>
-        current.map((member) => (member.id === updated.id ? updated : member)),
-      );
-      setFeedback('Data member berhasil diperbarui.');
+      const updated = await adminService.updateMember(editTarget.id, formState);
+      setMembers((current) => current.map((m) => (m.id === updated.id ? updated : m)));
+      setEditFeedback('✓ Data berhasil diperbarui.');
+      setTimeout(() => setEditTarget(null), 800);
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : 'Gagal memperbarui member.');
+      setEditFeedback(error instanceof Error ? error.message : 'Gagal memperbarui data.');
+    } finally {
+      setEditSaving(false);
     }
   };
 
-  const handleToggleStatus = async (memberId: number) => {
-    setFeedback(null);
+  const handleToggleConfirm = async () => {
+    if (!toggleTarget) return;
     try {
-      const updated = await adminService.toggleMemberStatus(memberId);
-      setMembers((current) =>
-        current.map((member) => (member.id === updated.id ? updated : member)),
-      );
-      setFeedback(
-        updated.account_status === 'aktif'
-          ? 'Akun member berhasil diaktifkan kembali.'
-          : 'Akun member berhasil dinonaktifkan.',
-      );
-    } catch (error) {
-      setFeedback(error instanceof Error ? error.message : 'Gagal mengubah status member.');
-    }
+      const updated = await adminService.toggleMemberStatus(toggleTarget.id);
+      setMembers((current) => current.map((m) => (m.id === updated.id ? updated : m)));
+    } catch {}
+    setToggleTarget(null);
   };
 
   return (
@@ -117,168 +103,70 @@ export const AdminMembersPage = () => {
       <PageHeader
         eyebrow="Member"
         title="Daftar member Gym Familly"
-        description="Lihat data dasar member beserta status membership terakhir mereka."
+        description="Lihat, cari, dan kelola data member beserta status membership mereka."
       />
+
       {expiringSoonMembers.length > 0 ? (
         <section className="section-intro-card warning">
           <div>
-            <span className="eyebrow">Reminder H-3</span>
-            <strong>{expiringSoonMembers.length} member mendekati masa expired.</strong>
-            <p>
-              Admin bisa langsung follow-up dari halaman ini sebelum membership benar-benar
-              berakhir.
-            </p>
+            <span className="eyebrow">Jatuh tempo H-3</span>
+            <strong>{expiringSoonMembers.length} member mendekati akhir masa aktif.</strong>
+            <p>Segera hubungi mereka agar tidak terlambat memperpanjang membership.</p>
           </div>
           <div className="section-intro-meta">
             <strong>Segera hubungi</strong>
-            <span className="form-helper-note">Prioritaskan member dengan status warning</span>
+            <span className="form-helper-note">{expiringSoonMembers.map((m) => m.nama).join(', ')}</span>
           </div>
         </section>
       ) : null}
-      {selectedMember ? (
-        <section className="premium-form-shell">
-          <article className="premium-form-intro">
-            <span className="eyebrow">Kelola member</span>
-            <h3>Perbarui data member tanpa keluar dari dashboard.</h3>
-            <p>
-              Edit nama, email, dan WhatsApp member. Untuk menonaktifkan akses, gunakan tombol nonaktifkan di bawah.
-            </p>
-            <div className="trend-summary">
-              <div className="list-item">
-                <small>Status akun</small>
-                <strong>{selectedMember.account_status === 'aktif' ? 'Aktif' : 'Nonaktif'}</strong>
-              </div>
-              <div className="list-item">
-                <small>Status paket</small>
-                <strong>
-                  {membershipHelpers.isExpiringSoon(memberships[selectedMember.id] ?? null)
-                    ? 'Segera berakhir'
-                    : memberships[selectedMember.id]?.status
-                      ? memberships[selectedMember.id]!.status
-                    : 'Belum ada paket'}
-                </strong>
-              </div>
-            </div>
-          </article>
 
-          <article className="panel premium-form-panel">
-            <form className="premium-form-grid member-edit-form" onSubmit={handleSubmit}>
-              <label>
-                <span>Pilih member</span>
-                <select
-                  value={selectedMemberId ?? ''}
-                  onChange={(event) => {
-                    setSelectedMemberId(Number(event.target.value));
-                    setFeedback(null);
-                  }}
-                >
-                  {members.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.nama}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="member-action-stack">
-                <span className={`table-chip ${selectedMember.account_status === 'aktif' ? '' : 'subtle'}`}>
-                  {selectedMember.account_status === 'aktif' ? 'Akun aktif' : 'Akun nonaktif'}
-                </span>
-                <button
-                  type="button"
-                  className="button-filter"
-                  onClick={() => handleToggleStatus(selectedMember.id)}
-                >
-                  {selectedMember.account_status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}
-                </button>
-              </div>
-              <label>
-                <span>Nama member</span>
-                <input
-                  value={formState.nama}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, nama: event.target.value }))
-                  }
-                  placeholder="Contoh: Raka Pratama"
-                  required
-                />
-              </label>
-              <label>
-                <span>Email</span>
-                <input
-                  type="email"
-                  value={formState.email}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, email: event.target.value }))
-                  }
-                  placeholder="member@email.com"
-                  required
-                />
-              </label>
-              <label className="field-span-2">
-                <span>WhatsApp</span>
-                <input
-                  value={formState.whatsapp}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, whatsapp: event.target.value }))
-                  }
-                  placeholder="08xxxxxxxxxx"
-                  required
-                />
-              </label>
-              <div className="form-actions-row field-span-2">
-                <button type="submit" className="table-action-button">
-                  Simpan perubahan
-                </button>
-                {feedback ? <span className="form-helper-note">{feedback}</span> : null}
-              </div>
-            </form>
-          </article>
-        </section>
-      ) : null}
       <section className="panel">
         <div className="panel-toolbar">
           <div>
             <h3>Direktori member</h3>
-            <p>Semua akun member yang telah terdaftar pada sistem.</p>
+            <p>Semua akun member yang terdaftar.</p>
           </div>
           <span className="table-chip">{filteredMembers.length} member</span>
         </div>
-        <div className="dashboard-inline-tools member-filter-row">
-          <button
-            type="button"
-            className={`button-filter ${memberFilter === 'semua' ? 'is-active' : ''}`}
-            onClick={() => setMemberFilter('semua')}
-          >
-            Semua
-          </button>
-          <button
-            type="button"
-            className={`button-filter ${memberFilter === 'aktif' ? 'is-active' : ''}`}
-            onClick={() => setMemberFilter('aktif')}
-          >
-            Aktif
-          </button>
-          <button
-            type="button"
-            className={`button-filter ${memberFilter === 'segera_berakhir' ? 'is-active' : ''}`}
-            onClick={() => setMemberFilter('segera_berakhir')}
-          >
-            Segera berakhir
-          </button>
-          <button
-            type="button"
-            className={`button-filter ${memberFilter === 'kedaluwarsa' ? 'is-active' : ''}`}
-            onClick={() => setMemberFilter('kedaluwarsa')}
-          >
-            Kedaluwarsa
-          </button>
+
+        {/* Search + Filter */}
+        <div className="dashboard-inline-tools member-filter-row" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+          <input
+            type="search"
+            placeholder="Cari nama, email, atau WhatsApp..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              flex: '1 1 200px',
+              padding: '0.45rem 0.75rem',
+              borderRadius: '999px',
+              border: '1px solid var(--line-soft)',
+              fontSize: '0.85rem',
+              outline: 'none',
+              background: 'var(--bg-card, #fff)',
+            }}
+          />
+          {(['semua', 'aktif', 'segera_berakhir', 'kedaluwarsa'] as MemberFilter[]).map((f) => (
+            <button
+              key={f}
+              type="button"
+              className={`button-filter ${memberFilter === f ? 'is-active' : ''}`}
+              onClick={() => setMemberFilter(f)}
+            >
+              {f === 'semua' ? 'Semua'
+                : f === 'aktif' ? 'Aktif'
+                : f === 'segera_berakhir' ? 'Segera berakhir'
+                : 'Kedaluwarsa'}
+            </button>
+          ))}
         </div>
+
         {members.length === 0 ? (
           <EmptyState title="Belum ada member" description="Member baru akan muncul setelah registrasi." />
         ) : filteredMembers.length === 0 ? (
           <EmptyState
-            title="Tidak ada member pada filter ini"
-            description="Coba ganti filter untuk melihat member dengan status lain."
+            title="Tidak ada hasil"
+            description={searchQuery ? `Tidak ada member yang cocok dengan "${searchQuery}".` : 'Coba ganti filter untuk melihat member lain.'}
           />
         ) : (
           <div className="table-wrap premium-table-wrap">
@@ -288,8 +176,8 @@ export const AdminMembersPage = () => {
                   <th>Nama</th>
                   <th>Email</th>
                   <th>WhatsApp</th>
-                  <th>Tanggal Terdaftar</th>
-                  <th>Tanggal Expired</th>
+                  <th>Terdaftar</th>
+                  <th>Expired</th>
                   <th>Status Akun</th>
                   <th>Status Membership</th>
                   <th>Aksi</th>
@@ -300,79 +188,160 @@ export const AdminMembersPage = () => {
                   const membership = memberships[member.id] ?? null;
                   const expiringSoon = membershipHelpers.isExpiringSoon(membership);
                   const daysRemaining = membershipHelpers.getDaysRemaining(membership);
-
                   return (
-                  <tr key={member.id}>
-                    <td>
-                      <div className="table-primary">
-                        <strong>{member.nama}</strong>
-                        <small>ID member #{member.id}</small>
-                      </div>
-                    </td>
-                    <td>{member.email}</td>
-                    <td>{member.whatsapp}</td>
-                    <td>
-                      <div className="finance-table-period">
+                    <tr key={member.id}>
+                      <td>
+                        <div className="table-primary">
+                          <strong>{member.nama}</strong>
+                        </div>
+                      </td>
+                      <td>{member.email}</td>
+                      <td>{member.whatsapp}</td>
+                      <td>
                         <strong>{formatDisplayDate(member.created_at)}</strong>
-                        <small>Tanggal akun dibuat</small>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="finance-table-period">
-                        <strong>{formatDisplayDate(membership?.tanggal_berakhir)}</strong>
-                        <small>
-                          {expiringSoon
-                            ? `Sisa ${daysRemaining} hari`
-                            : membership
-                              ? 'Masa aktif terakhir'
-                              : 'Belum ada membership'}
-                        </small>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`table-chip ${member.account_status === 'aktif' ? '' : 'subtle'}`}>
-                        {member.account_status === 'aktif' ? 'Aktif' : 'Nonaktif'}
-                      </span>
-                    </td>
-                    <td>
-                      {membership ? (
-                        expiringSoon ? (
-                          <StatusBadge status={membership.status} label="Segera berakhir" tone="warning" />
+                      </td>
+                      <td>
+                        <div className="finance-table-period">
+                          <strong>{formatDisplayDate(membership?.tanggal_berakhir)}</strong>
+                          <small>
+                            {expiringSoon
+                              ? `Sisa ${daysRemaining} hari`
+                              : membership
+                                ? 'Masa aktif terakhir'
+                                : '—'}
+                          </small>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`table-chip ${member.account_status === 'aktif' ? '' : 'subtle'}`}>
+                          {member.account_status === 'aktif' ? 'Aktif' : 'Nonaktif'}
+                        </span>
+                      </td>
+                      <td>
+                        {membership ? (
+                          expiringSoon ? (
+                            <StatusBadge status={membership.status} label="Segera berakhir" tone="warning" />
+                          ) : (
+                            <StatusBadge status={membership.status} />
+                          )
                         ) : (
-                          <StatusBadge status={membership.status} />
-                        )
-                      ) : (
-                        <span className="table-chip subtle">Belum ada paket</span>
-                      )}
-                    </td>
-                    <td>
-                      <div className="member-table-actions">
-                        <button
-                          type="button"
-                          className="button-filter"
-                          onClick={() => {
-                            setSelectedMemberId(member.id);
-                            setFeedback(null);
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="button-filter"
-                          onClick={() => handleToggleStatus(member.id)}
-                        >
-                          {member.account_status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )})}
+                          <span className="table-chip subtle">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="member-table-actions">
+                          <button
+                            type="button"
+                            className="button-filter"
+                            onClick={() => openEdit(member)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="button-filter"
+                            onClick={() => setToggleTarget(member)}
+                          >
+                            {member.account_status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </section>
+
+      {/* ── Edit Modal ─────────────────────────────────────────── */}
+      {editTarget ? (
+        <div className="proof-modal-overlay" onClick={() => setEditTarget(null)}>
+          <div className="proof-modal-card" style={{ maxWidth: 480, width: '100%' }} onClick={(e) => e.stopPropagation()}>
+            <div className="panel-toolbar">
+              <div>
+                <h3>Edit Data Member</h3>
+                <p>{editTarget.nama}</p>
+              </div>
+              <button type="button" className="button-filter" onClick={() => setEditTarget(null)}>Tutup</button>
+            </div>
+            <form className="form-grid premium-form-grid" onSubmit={handleEditSubmit} style={{ padding: '0 1rem 1rem' }}>
+              <label className="field-span-2">
+                <span>Nama Lengkap</span>
+                <input
+                  value={formState.nama}
+                  onChange={(e) => setFormState((s) => ({ ...s, nama: e.target.value }))}
+                  required
+                  placeholder="Nama lengkap member"
+                />
+              </label>
+              <label className="field-span-2">
+                <span>Email</span>
+                <input
+                  type="email"
+                  value={formState.email}
+                  onChange={(e) => setFormState((s) => ({ ...s, email: e.target.value }))}
+                  required
+                  placeholder="member@email.com"
+                />
+              </label>
+              <label className="field-span-2">
+                <span>WhatsApp</span>
+                <input
+                  value={formState.whatsapp}
+                  onChange={(e) => setFormState((s) => ({ ...s, whatsapp: e.target.value }))}
+                  required
+                  placeholder="08xxxxxxxxxx"
+                />
+              </label>
+              {editFeedback ? (
+                <p className={`field-span-2 ${editFeedback.startsWith('✓') ? 'form-success' : 'form-error'}`}>
+                  {editFeedback}
+                </p>
+              ) : null}
+              <div className="form-actions-row field-span-2">
+                <button type="submit" className="button-primary" disabled={editSaving}>
+                  {editSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+                <button type="button" className="button-filter" onClick={() => setEditTarget(null)}>Batal</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Konfirmasi Toggle Status ────────────────────────────── */}
+      {toggleTarget ? (
+        <div className="proof-modal-overlay" onClick={() => setToggleTarget(null)}>
+          <div className="proof-modal-card success-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className={`success-modal-badge ${toggleTarget.account_status === 'aktif' ? 'blocked-modal-badge' : ''}`}>
+              {toggleTarget.account_status === 'aktif' ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}
+            </div>
+            <h3>
+              {toggleTarget.account_status === 'aktif'
+                ? `Nonaktifkan akun ${toggleTarget.nama}?`
+                : `Aktifkan kembali akun ${toggleTarget.nama}?`}
+            </h3>
+            <p>
+              {toggleTarget.account_status === 'aktif'
+                ? 'Member tidak akan bisa login dan menggunakan barcode sampai diaktifkan kembali.'
+                : 'Member akan bisa login dan menggunakan layanan Gym Familly kembali.'}
+            </p>
+            <div className="inline-actions success-modal-actions">
+              <button
+                type="button"
+                className="button-primary"
+                style={toggleTarget.account_status === 'aktif' ? { background: 'var(--color-danger, #ef4444)' } : {}}
+                onClick={handleToggleConfirm}
+              >
+                {toggleTarget.account_status === 'aktif' ? 'Ya, Nonaktifkan' : 'Ya, Aktifkan'}
+              </button>
+              <button type="button" className="button-filter" onClick={() => setToggleTarget(null)}>Batal</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
