@@ -38,8 +38,8 @@ export const AdminDashboardPage = () => {
       <section className="dashboard-banner">
         <div>
           <span className="eyebrow">Dashboard Admin</span>
-          <h2>Ringkasan operasional gym.</h2>
-          <p>Pantau pembayaran, member aktif, dan kunjungan dari satu layar.</p>
+          <h2>Selamat datang di panel admin.</h2>
+          <p>Pantau member aktif, pembayaran, dan kunjungan gym dari satu halaman.</p>
         </div>
         <button
           type="button"

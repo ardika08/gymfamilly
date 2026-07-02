@@ -33,20 +33,20 @@ export const LoginPage = () => {
     <section className="auth-shell">
       <div className="panel auth-showcase-card">
         <span className="eyebrow">Masuk</span>
-        <h1>Akses dashboard member dan admin dari satu akun.</h1>
-        <p>Masuk untuk melihat membership, pembayaran, barcode, dan operasional gym.</p>
+        <h1>Selamat datang kembali di Gym Familly.</h1>
+        <p>Masuk untuk cek status membership, barcode, dan aktivitas gym kamu.</p>
         <div className="mini-metric-grid">
           <div className="mini-metric">
-            <span>Dashboard</span>
-            <strong>Member & Admin</strong>
+            <span>Member</span>
+            <strong>Dashboard pribadi</strong>
           </div>
           <div className="mini-metric">
-            <span>Akses</span>
+            <span>Check-in</span>
             <strong>Barcode digital</strong>
           </div>
           <div className="mini-metric">
             <span>Pembayaran</span>
-            <strong>Verifikasi admin</strong>
+            <strong>Otomatis aktif</strong>
           </div>
           <div className="mini-metric">
             <span>Status</span>
@@ -54,9 +54,9 @@ export const LoginPage = () => {
           </div>
         </div>
         <div className="auth-trust-row">
-          <span className="table-chip success">Akun aktif</span>
+          <span className="table-chip success">Aman & terenkripsi</span>
           <span className="table-chip subtle">Akses cepat</span>
-          <span className="table-chip warning">Cek status</span>
+          <span className="table-chip warning">Notifikasi aktif</span>
         </div>
       </div>
 

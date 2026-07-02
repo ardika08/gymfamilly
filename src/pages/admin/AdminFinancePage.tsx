@@ -498,7 +498,7 @@ export const AdminFinancePage = () => {
           <p>Pengeluaran operasional sederhana pada periode aktif.</p>
         </article>
         <article className="stat-card">
-          <span>Laba / Rugi</span>
+          <span>Laba Bersih</span>
           <strong>{currency.format(financeSummary.profitLoss)}</strong>
           <p>Selisih pemasukan aktif dan total pengeluaran.</p>
         </article>
@@ -696,7 +696,7 @@ export const AdminFinancePage = () => {
         <div className="section-intro-card finance-table-hint">
           <div>
             <small>Akses cepat detail member</small>
-            <strong>Klik baris transaksi untuk lihat detail member.</strong>
+            <strong>Klik baris transaksi untuk melihat detail member.</strong>
           </div>
         </div>
         <div className="table-wrap premium-table-wrap">
