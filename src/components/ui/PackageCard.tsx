@@ -25,6 +25,7 @@ export const PackageCard = ({ item, action, adminAction }: PackageCardProps) => 
         <span className="old-price">{currency.format(item.harga_normal)}</span>
       ) : null}
       <strong>{currency.format(item.harga_promo ?? item.harga_normal)}</strong>
+      <small style={{ fontWeight: 'normal', opacity: 0.7 }}>{item.durasi_hari} hari aktif</small>
     </div>
     {action ? <div className="package-action">{action}</div> : null}
   </article>

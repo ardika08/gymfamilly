@@ -46,29 +46,28 @@ export const RegisterPage = () => {
     <section className="auth-shell">
       <div className="panel auth-showcase-card register">
         <span className="eyebrow">Daftar</span>
-        <h1>Buat akun member dan mulai membership lebih cepat.</h1>
+        <h1>Mulai perjalanan gym kamu hari ini.</h1>
         <p>
-          Setelah akun dibuat, kamu bisa pilih paket, kirim pembayaran, dan cek
-          status dari dashboard.
+          Daftar sekarang, pilih paket yang sesuai, dan langsung aktifkan membership kamu.
         </p>
         <div className="task-list">
           <div className="task-row">
-            <strong>1. Isi data dasar</strong>
+            <strong>1. Isi data kamu</strong>
             <span>Nama, email, WhatsApp</span>
           </div>
           <div className="task-row">
             <strong>2. Pilih paket</strong>
-            <span>Sesuaikan dengan kebutuhan latihan</span>
+            <span>Harian, bulanan, atau tahunan</span>
           </div>
           <div className="task-row">
-            <strong>3. Kirim pembayaran</strong>
-            <span>Admin akan verifikasi membership</span>
+            <strong>3. Bayar & langsung aktif</strong>
+            <span>Membership aktif otomatis setelah bayar</span>
           </div>
         </div>
         <div className="auth-trust-row">
-          <span className="table-chip success">Registrasi mandiri</span>
-          <span className="table-chip subtle">Pilih paket</span>
-          <span className="table-chip warning">Verifikasi admin</span>
+          <span className="table-chip success">Gratis daftar</span>
+          <span className="table-chip subtle">Pilih paket bebas</span>
+          <span className="table-chip warning">Aktif otomatis</span>
         </div>
       </div>
 
@@ -76,7 +75,7 @@ export const RegisterPage = () => {
         <div className="auth-card-header">
           <span className="eyebrow">Registrasi Member</span>
           <h2>Buat akun</h2>
-          <p>Isi data dasar untuk mulai menggunakan sistem.</p>
+          <p>Isi data kamu untuk mulai daftar.</p>
         </div>
         <form className="form-grid premium-auth-form" onSubmit={handleSubmit}>
           <label>

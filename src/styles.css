@@ -139,7 +139,7 @@ button {
 
 .primary-link,
 .button-primary {
-  background: #1f7a4d;
+  background: #ab182a;
   color: white;
   border: 0;
 }
@@ -148,8 +148,8 @@ button {
 .button-secondary,
 .ghost-button,
 .button-inline {
-  background: rgba(31, 122, 77, 0.09);
-  color: #185c3b;
+  background: rgba(171, 24, 42, 0.09);
+  color: #ab182a;
   border: 0;
 }
 
@@ -159,6 +159,8 @@ button {
 
 .page-shell:has(.dashboard-app-shell) {
   padding: 0;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .public-app-shell {
@@ -1101,7 +1103,8 @@ button {
   position: sticky;
   top: 0;
   align-self: start;
-  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
   background:
     radial-gradient(circle at top left, rgba(171, 24, 42, 0.1), transparent 28%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 255, 0.98));
@@ -1354,7 +1357,9 @@ button {
 
 .dashboard-main-shell {
   min-width: 0;
-  min-height: 100vh;
+  min-height: 0;
+  height: 100vh;
+  overflow-y: auto;
   display: grid;
   grid-template-rows: auto 1fr auto;
   padding: 0.8rem;
@@ -1492,7 +1497,8 @@ button {
 
 .dashboard-banner {
   border-radius: 1.1rem;
-  padding: 0.82rem 1rem;
+  padding: 1.25rem 1.5rem;
+  margin-top: 0.5rem;
   display: flex;
   justify-content: space-between;
   gap: 1rem;
@@ -4286,4 +4292,66 @@ td {
     justify-content: center;
     text-align: center;
   }
+}
+
+/* Payment Mode Toggle */
+.payment-mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.payment-mode-toggle .button-filter.active {
+  background: var(--color-primary, #ab182a);
+  color: #fff;
+  border-color: var(--color-primary, #ab182a);
+}
+
+/* Voucher */
+.voucher-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.voucher-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.voucher-input-group input {
+  flex: 1;
+}
+
+.voucher-success-card {
+  background: color-mix(in srgb, #22c55e 10%, transparent);
+  border: 1px solid #22c55e;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.voucher-success-card strong {
+  color: #16a34a;
+  font-size: 0.95rem;
+}
+
+.voucher-discount-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.voucher-discount-row strong {
+  color: var(--color-text, #111);
+}
+
+.form-error {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin: 0.25rem 0 0;
 }

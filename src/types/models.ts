@@ -11,7 +11,6 @@ export interface User {
   id: number;
   nama: string;
   email: string;
-  password: string;
   role: Role;
   whatsapp: string;
   account_status: AccountStatus;
@@ -25,6 +24,7 @@ export interface GymPackage {
   harga_normal: number;
   harga_promo?: number | null;
   deskripsi: string;
+  durasi_hari: number;
 }
 
 export interface Membership {
@@ -37,6 +37,9 @@ export interface Membership {
   status: MembershipStatus;
   payment_method?: string | null;
   payment_proof?: string | null;
+  payment_url?: string | null;
+  voucher_id?: number | null;
+  voucher_diskon?: number;
 }
 
 export interface PaymentMethodSetting {
@@ -92,6 +95,7 @@ export interface PaymentReportInput {
   packageId: number;
   paymentMethod: string;
   paymentProof: File;
+  voucherKode?: string;
 }
 
 export interface RegisterInput {
@@ -99,6 +103,33 @@ export interface RegisterInput {
   email: string;
   whatsapp: string;
   password: string;
+}
+
+export type VoucherTipe = 'percent' | 'fixed' | 'free' | 'bonus_days';
+
+export interface Voucher {
+  id: number;
+  kode: string;
+  deskripsi?: string | null;
+  tipe: VoucherTipe;
+  nilai: number;
+  maks_penggunaan?: number | null;
+  maks_per_user: number;
+  valid_dari?: string | null;
+  valid_hingga?: string | null;
+  status: 'aktif' | 'nonaktif';
+  total_digunakan: number;
+  created_at?: string | null;
+}
+
+export interface VoucherCheckResult {
+  kode: string;
+  tipe: VoucherTipe;
+  nilai: number;
+  diskon: number;
+  harga_akhir: number;
+  bonus_days: number;
+  deskripsi?: string | null;
 }
 
 export interface LoginInput {

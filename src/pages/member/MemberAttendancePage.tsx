@@ -30,11 +30,11 @@ export const MemberAttendancePage = () => {
         <div>
           <small>Total check-in</small>
           <strong>{items.length} kunjungan tercatat</strong>
-          <p>Gunakan riwayat ini untuk melihat pola datang dan memastikan scan selalu berhasil.</p>
+          <p>Riwayat kehadiran kamu di Gym Familly. Setiap scan barcode yang berhasil akan muncul di sini.</p>
         </div>
         <div className="section-intro-meta">
-          <span>Status akses</span>
-          <strong>Tersinkron</strong>
+          <span>Status</span>
+          <strong>Tersimpan otomatis</strong>
         </div>
       </section>
       <section className="panel">

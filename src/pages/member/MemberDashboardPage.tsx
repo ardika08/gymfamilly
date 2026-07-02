@@ -178,12 +178,12 @@ export const MemberDashboardPage = () => {
           hint="Setiap scan barcode akan dicatat otomatis."
         />
         <StatCard
-          label="Reminder WA"
+          label="Notifikasi"
           value={isExpiringSoon ? 'H-3 aktif' : 'Aktif'}
           hint={
             isExpiringSoon
-              ? 'Segera lakukan perpanjangan sebelum akses check-in berhenti.'
-              : 'Notifikasi akan dikirim saat registrasi dan H-3 expired.'
+              ? 'Segera perpanjang sebelum akses check-in berhenti.'
+              : 'Notifikasi akan dikirim H-3 sebelum membership berakhir.'
           }
         />
       </div>
@@ -248,8 +248,8 @@ export const MemberDashboardPage = () => {
           </div>
           <div className="quick-tips">
             <div>
-              <span>Reminder aktif</span>
-              <strong>WA H-3 siap</strong>
+              <span>Notifikasi</span>
+              <strong>Aktif H-3</strong>
             </div>
             <div>
               <span>Total check-in</span>
@@ -264,8 +264,8 @@ export const MemberDashboardPage = () => {
           <h3>Aksi cepat</h3>
           <div className="quick-link-grid">
             <Link to="/member/payments" className="quick-link-card">
-              <strong>Kirim Pembayaran</strong>
-              <p>Upload bukti transfer.</p>
+              <strong>Bayar Membership</strong>
+              <p>Pilih paket dan bayar online.</p>
             </Link>
             <Link to="/member/barcode" className="quick-link-card">
               <strong>Buka Barcode</strong>

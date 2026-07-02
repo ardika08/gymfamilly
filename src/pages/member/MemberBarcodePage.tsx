@@ -56,12 +56,12 @@ export const MemberBarcodePage = () => {
       <div className="stack-lg">
         <PageHeader
           eyebrow="Barcode"
-          title="Barcode digital"
-          description="Barcode akan muncul setelah pembayaran diverifikasi admin."
+          title="Barcode digital kamu"
+          description="Tunjukkan QR code ini ke petugas saat masuk gym."
         />
         <EmptyState
           title="Belum ada barcode aktif"
-          description="Kirim bukti pembayaran dulu agar akun bisa diaktifkan."
+          description="Selesaikan pembayaran membership untuk mengaktifkan barcode."
         />
       </div>
     );

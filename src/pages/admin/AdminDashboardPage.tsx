@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { PageHeader } from '../../components/ui/PageHeader';
 import { StatCard } from '../../components/ui/StatCard';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { adminService } from '../../services/api';
@@ -12,49 +11,64 @@ const currency = new Intl.NumberFormat('id-ID', {
   maximumFractionDigits: 0,
 });
 
+interface TrendData {
+  visitTrend: { date: string; count: number }[];
+  revenueTrend: { month: string; revenue: number }[];
+}
+
 export const AdminDashboardPage = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [expiringMembers, setExpiringMembers] = useState<
     { member: User; membership: Membership | null }[]
   >([]);
+  const [trends, setTrends] = useState<TrendData | null>(null);
   usePageTitle('Dashboard Admin');
 
   useEffect(() => {
     adminService.dashboardSummary().then(setSummary);
     adminService.expiringMembers().then(setExpiringMembers);
+    adminService.trends().then(setTrends);
   }, []);
 
-  const visitTrend = [42, 74, 61, 102, 84, 96, 126, 78, 108, 72];
-  const trendDots = [36, 78, 52, 42, 112, 58, 90, 126];
+  const visitTrend = trends?.visitTrend.map((d) => d.count) ?? [];
+  const trendDots = trends?.revenueTrend.map((d) => d.revenue) ?? [];
 
   return (
     <div className="stack-lg">
       <section className="dashboard-banner">
         <div>
           <span className="eyebrow">Dashboard Admin</span>
-          <h2>Ringkasan operasional gym.</h2>
-          <p>Pantau pembayaran, member aktif, dan kunjungan dari satu layar.</p>
+          <h2>Selamat datang di panel admin.</h2>
+          <p>Pantau member aktif, pembayaran, dan kunjungan gym dari satu halaman.</p>
         </div>
-        <button type="button" className="button-light">
+        <button
+          type="button"
+          className="button-light"
+          onClick={() => {
+            if (!summary) return;
+            const rows = [
+              ['Metrik', 'Nilai'],
+              ['Member Aktif', String(summary.activeMembers)],
+              ['Pembayaran Pending', String(summary.pendingPayments)],
+              ['Pendapatan', currency.format(summary.monthlyRevenue)],
+              ['Check-in Hari Ini', String(summary.attendanceToday)],
+              ['Reminder H-3', String(summary.expiringSoonCount)],
+            ];
+            const csv = rows.map((r) => r.join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ringkasan-gym-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
           Export ringkasan
         </button>
       </section>
 
-      <PageHeader
-        eyebrow="Dashboard Admin"
-        title="Kontrol operasional Gym Familly"
-        description="Ringkasan utama pembayaran, pendapatan, dan check-in."
-        actions={
-          <div className="dashboard-inline-tools">
-            <button type="button" className="button-filter">
-              27/05/2026
-            </button>
-            <button type="button" className="button-filter">
-              30 Hari
-            </button>
-          </div>
-        }
-      />
+
       <div className="stats-grid">
         <StatCard
           label="Member Aktif"
@@ -64,7 +78,7 @@ export const AdminDashboardPage = () => {
         <StatCard
           label="Pembayaran Pending"
           value={`${summary?.pendingPayments ?? 0}`}
-          hint="Butuh verifikasi transfer manual."
+          hint="Transaksi yang menunggu konfirmasi pembayaran."
         />
         <StatCard
           label="Pendapatan"
@@ -187,10 +201,6 @@ export const AdminDashboardPage = () => {
               <span>Total pendapatan</span>
               <strong>{currency.format(summary?.monthlyRevenue ?? 0)}</strong>
             </div>
-            <div>
-              <span>Pertumbuhan</span>
-              <strong>+20.1%</strong>
-            </div>
           </div>
         </article>
       </section>
@@ -205,7 +215,7 @@ export const AdminDashboardPage = () => {
           </div>
           <div className="task-list">
             <div className="task-row">
-              <strong>Verifikasi pembayaran manual</strong>
+              <strong>Verifikasi pembayaran</strong>
               <span>{summary?.pendingPayments ?? 0} transaksi menunggu</span>
             </div>
             <div className="task-row">
@@ -228,19 +238,19 @@ export const AdminDashboardPage = () => {
           </div>
           <div className="mini-metric-grid">
             <div className="mini-metric">
-              <span>Konversi</span>
-              <strong>74%</strong>
+              <span>Member aktif</span>
+              <strong>{summary?.activeMembers ?? 0}</strong>
             </div>
             <div className="mini-metric">
-              <span>Member kembali</span>
-              <strong>61%</strong>
+              <span>Pending bayar</span>
+              <strong>{summary?.pendingPayments ?? 0}</strong>
             </div>
             <div className="mini-metric">
-              <span>Reminder WA</span>
-              <strong>{summary?.expiringSoonCount ?? 0} antrean</strong>
+              <span>Jatuh tempo H-3</span>
+              <strong>{summary?.expiringSoonCount ?? 0} member</strong>
             </div>
             <div className="mini-metric">
-              <span>Sinyal member</span>
+              <span>Kondisi</span>
               <strong>{expiringMembers.length > 0 ? 'Perlu follow-up' : 'Stabil'}</strong>
             </div>
           </div>

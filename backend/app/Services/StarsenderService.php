@@ -59,6 +59,7 @@ class StarsenderService
                     'messageType' => 'text',
                     'to' => $normalizedTarget,
                     'body' => $message,
+                    'device_id' => $deviceId,
                 ]);
 
             $log->update([

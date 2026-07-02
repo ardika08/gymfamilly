@@ -11,6 +11,12 @@ class WebhookController extends Controller
 {
     public function starsender(Request $request)
     {
+        $secret = config('services.starsender.webhook_secret');
+
+        if ($secret && $request->header('X-Webhook-Secret') !== $secret) {
+            return ApiResponse::error('Unauthorized.', 401);
+        }
+
         $payload = $request->all();
 
         NotificationLog::create([

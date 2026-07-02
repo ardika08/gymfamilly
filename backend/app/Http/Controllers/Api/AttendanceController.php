@@ -31,11 +31,20 @@ class AttendanceController extends Controller
         return ApiResponse::success($items);
     }
 
-    public function allAttendances()
+    public function allAttendances(Request $request)
     {
-        $items = Attendance::query()
-            ->latest('waktu_scan')
-            ->get()
+        $query = Attendance::query()->latest('waktu_scan');
+
+        if ($request->has('per_page')) {
+            $paginated = $query->paginate((int) $request->input('per_page', 20));
+            $paginated->getCollection()->transform(
+                fn (Attendance $attendance) => GymPayload::attendance($attendance)
+            );
+
+            return ApiResponse::success($paginated);
+        }
+
+        $items = $query->get()
             ->map(fn (Attendance $attendance) => GymPayload::attendance($attendance));
 
         return ApiResponse::success($items);
@@ -51,8 +60,10 @@ class AttendanceController extends Controller
         $member = null;
 
         if (! empty($validated['qr_code'])) {
-            preg_match('/member:(\d+)/', $validated['qr_code'], $matches);
-            $member = isset($matches[1]) ? User::where('role', 'member')->find((int) $matches[1]) : null;
+            if (! preg_match('/^GF\|member:(\d+)\|membership:(\d+)$/', $validated['qr_code'], $matches)) {
+                return ApiResponse::error('Format QR code tidak valid.', 422);
+            }
+            $member = User::where('role', 'member')->find((int) $matches[1]);
         }
 
         if (! $member && ! empty($validated['userId'])) {

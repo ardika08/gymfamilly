@@ -45,6 +45,7 @@ const adminSections: NavSection[] = [
       { to: '/admin/payments', label: 'Pembayaran', icon: 'wallet' },
       { to: '/admin/finance', label: 'Keuangan', icon: 'finance' },
       { to: '/admin/packages', label: 'Paket & Promo', icon: 'package' },
+      { to: '/admin/vouchers', label: 'Voucher', icon: 'finance' },
     ],
   },
   {

@@ -158,6 +158,8 @@ const apiRequest = async <T,>(path: string, init?: RequestInit): Promise<T> => {
   const session = readSession();
   const headers = new Headers(init?.headers);
 
+  headers.set('Accept', 'application/json');
+
   if (!headers.has('Content-Type') && init?.body && !(init.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
@@ -169,6 +171,8 @@ const apiRequest = async <T,>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers,
+  }).catch(() => {
+    throw new Error('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
   });
 
   if (response.status === 401) {
@@ -305,11 +309,36 @@ export const paymentMethodService = {
     dbKey: PAYMENT_METHOD_STORAGE_SYNC_KEY,
   },
   async list() {
-    return readPaymentMethodSettings();
+    try {
+      const items = await apiGet<PaymentMethodSetting[]>('/api/payment-methods');
+      writePaymentMethodSettings(items);
+      return items;
+    } catch {
+      return readPaymentMethodSettings();
+    }
   },
   async save(input: PaymentMethodSetting[]) {
-    writePaymentMethodSettings(input);
-    return readPaymentMethodSettings();
+    try {
+      const items = await apiPost<PaymentMethodSetting[]>('/api/admin/payment-methods', {
+        methods: input.map((m) => ({
+          code: m.code,
+          label: m.label,
+          account_number: m.accountNumber,
+          account_name: m.accountName,
+        })),
+      });
+      const mapped = items.map((item: any) => ({
+        code: item.code,
+        label: item.label,
+        accountNumber: item.account_number ?? '',
+        accountName: item.account_name ?? null,
+      }));
+      writePaymentMethodSettings(mapped);
+      return mapped;
+    } catch {
+      writePaymentMethodSettings(input);
+      return readPaymentMethodSettings();
+    }
   },
 };
 
@@ -348,6 +377,7 @@ export const membershipService = {
     const checkout = await apiPost<Membership>('/api/membership/checkout', {
       packageId: input.packageId,
       paymentMethod: input.paymentMethod,
+      voucherKode: input.voucherKode,
     });
 
     const formData = new FormData();
@@ -361,6 +391,31 @@ export const membershipService = {
   },
   async barcode() {
     return apiGet<{ membership: Membership; barcode: string } | null>('/api/member/barcode');
+  },
+};
+
+export const duitkuService = {
+  async checkout(packageId: number, paymentMethod: string, voucherKode?: string) {
+    return apiPost<{
+      membership: Membership;
+      payment_url: string | null;
+      va_number: string | null;
+      qr_string: string | null;
+      reference: string | null;
+      amount: number;
+    }>('/api/membership/duitku/checkout', { packageId, paymentMethod, voucherKode });
+  },
+  async getPaymentMethods(amount: number) {
+    return apiGet<
+      { paymentMethod: string; paymentName: string; paymentImage: string; totalFee: number }[]
+    >(`/api/membership/duitku/payment-methods?amount=${amount}`);
+  },
+  async checkStatus(membershipId: number) {
+    return apiPost<{
+      membership: Membership;
+      transaction_status: string | null;
+      status_message: string | null;
+    }>('/api/membership/duitku/check-status', { membershipId });
   },
 };
 
@@ -418,6 +473,12 @@ export const adminService = {
   async dashboardSummary(): Promise<DashboardSummary> {
     return apiGet<DashboardSummary>('/api/admin/dashboard/analytics');
   },
+  async trends() {
+    return apiGet<{
+      visitTrend: { date: string; count: number }[];
+      revenueTrend: { month: string; revenue: number }[];
+    }>('/api/admin/dashboard/trends');
+  },
   async members() {
     const items = await apiGet<User[]>('/api/admin/members');
     cacheMembers(items);
@@ -464,35 +525,25 @@ export const adminService = {
     return apiPost<Expense>('/api/admin/expenses', input);
   },
   async adminProfile() {
-    const members = profileCache.users.filter((user) => user.role === 'member');
-    const currentUser = await authService.currentUser();
+    return apiGet<User>('/api/admin/profile');
+  },
+};
 
-    if (currentUser?.role === 'admin') {
-      return currentUser;
-    }
-
-    if (members.length === 0) {
-      await this.members();
-    }
-
-    const messages = await messageService.listForUser(currentUser?.id ?? 0);
-    const adminId = messages.find((message) => message.pengirim_id !== currentUser?.id)?.pengirim_id ?? 1;
-    const admin = profileCache.users.find((user) => user.id === adminId && user.role === 'admin');
-
-    if (admin) {
-      return admin;
-    }
-
-    return {
-      id: 1,
-      nama: 'Admin Gym Familly',
-      email: 'admin@gymfamilly.id',
-      password: '',
-      role: 'admin',
-      whatsapp: '081234567890',
-      account_status: 'aktif',
-      created_at: null,
-    } as User;
+export const voucherService = {
+  async check(kode: string, packageId: number) {
+    return apiPost<import('../types/models').VoucherCheckResult>('/api/voucher/check', { kode, package_id: packageId });
+  },
+  async list() {
+    return apiGet<import('../types/models').Voucher[]>('/api/admin/vouchers');
+  },
+  async create(data: Omit<import('../types/models').Voucher, 'id' | 'total_digunakan' | 'created_at'>) {
+    return apiPost<import('../types/models').Voucher>('/api/admin/vouchers', data);
+  },
+  async update(id: number, data: Omit<import('../types/models').Voucher, 'id' | 'total_digunakan' | 'created_at'>) {
+    return apiPut<import('../types/models').Voucher>(`/api/admin/vouchers/${id}`, data);
+  },
+  async remove(id: number) {
+    return apiDelete(`/api/admin/vouchers/${id}`);
   },
 };
 

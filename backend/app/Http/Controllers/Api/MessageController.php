@@ -13,9 +13,13 @@ class MessageController extends Controller
 {
     public function memberMessages(Request $request)
     {
+        $userId = $request->user()->id;
+
         $items = Message::query()
-            ->where('pengirim_id', $request->user()->id)
-            ->orWhere('penerima_id', $request->user()->id)
+            ->where(function ($query) use ($userId) {
+                $query->where('pengirim_id', $userId)
+                    ->orWhere('penerima_id', $userId);
+            })
             ->orderBy('waktu_kirim')
             ->get()
             ->map(fn (Message $message) => GymPayload::message($message));

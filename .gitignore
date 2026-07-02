@@ -5,8 +5,12 @@
 /storage/*.key
 /.env
 /.env.backup
+/.env.production
+/.env.development
 /.phpunit.result.cache
 /npm-debug.log
 /yarn-error.log
 /.idea
 /.vscode
+/dist
+*.log

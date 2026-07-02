@@ -10,6 +10,7 @@ import { AdminMessagesPage } from './pages/admin/AdminMessagesPage';
 import { AdminPackagesPage } from './pages/admin/AdminPackagesPage';
 import { AdminPaymentsPage } from './pages/admin/AdminPaymentsPage';
 import { AdminScannerPage } from './pages/admin/AdminScannerPage';
+import { AdminVouchersPage } from './pages/admin/AdminVouchersPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { MemberAttendancePage } from './pages/member/MemberAttendancePage';
@@ -137,6 +138,7 @@ export default function App() {
         <Route path="messages" element={<AdminMessagesPage />} />
         <Route path="attendance" element={<AdminAttendancePage />} />
         <Route path="scanner" element={<AdminScannerPage />} />
+        <Route path="vouchers" element={<AdminVouchersPage />} />
       </Route>
     </Routes>
   );

@@ -16,6 +16,7 @@ export const AdminPackagesPage = () => {
     harga_normal: '',
     harga_promo: '',
     deskripsi: '',
+    durasi_hari: '',
   });
   usePageTitle('Kelola Paket');
 
@@ -35,6 +36,7 @@ export const AdminPackagesPage = () => {
       harga_normal: '',
       harga_promo: '',
       deskripsi: '',
+      durasi_hari: '',
     });
   };
 
@@ -47,6 +49,7 @@ export const AdminPackagesPage = () => {
       harga_normal: Number(form.harga_normal),
       harga_promo: form.harga_promo ? Number(form.harga_promo) : null,
       deskripsi: form.deskripsi,
+      durasi_hari: Number(form.durasi_hari),
     });
     resetForm();
     refresh();
@@ -87,7 +90,7 @@ export const AdminPackagesPage = () => {
                 placeholder="Contoh: Paket 3 Bulan Intensif"
                 required
               />
-              <small>Nama harus langsung menjelaskan durasi atau segmen paket.</small>
+              <small>Nama paket yang akan tampil di katalog member.</small>
             </label>
             <label>
               <span>Label Promo</span>
@@ -97,7 +100,7 @@ export const AdminPackagesPage = () => {
                 placeholder="Contoh: Promo"
                 required
               />
-              <small>Label kecil yang tampil di badge card paket.</small>
+              <small>Label badge kecil di kartu paket. Kosongkan jika tidak promo.</small>
             </label>
             <label>
               <span>Harga Normal</span>
@@ -108,7 +111,7 @@ export const AdminPackagesPage = () => {
                 placeholder="330000"
                 required
               />
-              <small>Harga dasar sebelum promo dicoret di halaman katalog.</small>
+              <small>Harga asli sebelum diskon, ditampilkan dengan coret di katalog.</small>
             </label>
             <label>
               <span>Harga Promo</span>
@@ -118,7 +121,7 @@ export const AdminPackagesPage = () => {
                 type="number"
                 placeholder="299000"
               />
-              <small>Kosongkan jika paket tidak sedang promo.</small>
+              <small>Harga setelah diskon. Kosongkan jika tidak ada promo.</small>
             </label>
             <label className="field-span-2">
               <span>Deskripsi Benefit</span>
@@ -128,6 +131,18 @@ export const AdminPackagesPage = () => {
                 required
               />
               <small>Contoh: Akses harian atau bonus fasilitas.</small>
+            </label>
+            <label>
+              <span>Durasi Membership (hari)</span>
+              <input
+                value={form.durasi_hari}
+                onChange={(event) => setForm({ ...form, durasi_hari: event.target.value })}
+                type="number"
+                min="1"
+                placeholder="30"
+                required
+              />
+              <small>Berapa hari membership aktif setelah pembayaran berhasil.</small>
             </label>
             <div className="form-actions-row field-span-2">
               <button type="submit" className="button-primary">
@@ -171,6 +186,7 @@ export const AdminPackagesPage = () => {
                           harga_normal: String(item.harga_normal),
                           harga_promo: item.harga_promo ? String(item.harga_promo) : '',
                           deskripsi: item.deskripsi,
+                          durasi_hari: String(item.durasi_hari ?? 30),
                         });
                         setOpenMenuId(null);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
