@@ -22,14 +22,14 @@ class WhatsAppTemplateService
 
     public function paymentVerified(User $user, Membership $membership, GymPackage $package): string
     {
-        $endDate = $this->formatEnglishDate($membership->tanggal_berakhir);
+        $endDate = $this->formatDate($membership->tanggal_berakhir);
         $loginUrl = rtrim((string) config('app.frontend_url', ''), '/').'/login';
 
         return $this->compose(
             "Halo {$user->nama},",
-            "Pembayaran membership Anda telah kami terima dan verifikasi. Membership paket {$package->nama_paket} saat ini sudah aktif dan berlaku sampai {$endDate}.",
-            "Silahkan login dashboard:\n{$loginUrl}",
-            'Gunakan QR check-in Anda saat datang ke Gym Familly.',
+            "Pembayaran membership Anda telah kami terima. Paket *{$package->nama_paket}* sudah aktif dan berlaku sampai *{$endDate}*.",
+            "Silakan login ke dashboard Gym Familly:\n{$loginUrl}\n\n🔑 Email: {$user->email}\n🔑 Password: (password yang Anda daftarkan)",
+            'Tunjukkan QR code saat check-in di Gym Familly.',
         );
     }
 
@@ -47,22 +47,24 @@ class WhatsAppTemplateService
     public function membershipExpiryReminder(User $user, Membership $membership): string
     {
         $endDate = $this->formatDate($membership->tanggal_berakhir);
+        $paymentUrl = rtrim((string) config('app.frontend_url', ''), '/').'/member/payments';
 
         return $this->compose(
             "Halo {$user->nama},",
-            "Membership Anda akan berakhir pada {$endDate}. Agar akses gym tetap aktif tanpa jeda, silakan lakukan perpanjangan sebelum masa aktif berakhir.",
-            'Anda dapat memperpanjang membership melalui akun Gym Familly Anda.',
+            "Membership Anda akan berakhir pada *{$endDate}*. Segera perpanjang agar akses gym tetap aktif tanpa jeda.",
+            "Perpanjang sekarang:\n{$paymentUrl}",
         );
     }
 
     public function membershipInactive(User $user, Membership $membership): string
     {
         $endDate = $this->formatDate($membership->tanggal_berakhir);
+        $paymentUrl = rtrim((string) config('app.frontend_url', ''), '/').'/member/payments';
 
         return $this->compose(
             "Halo {$user->nama},",
-            "Membership Anda telah berakhir pada {$endDate} dan saat ini status keanggotaan Anda tidak aktif.",
-            'Untuk kembali menggunakan akses check-in Gym Familly, silakan lakukan perpanjangan membership melalui akun Anda.',
+            "Membership Anda telah berakhir pada *{$endDate}*. Akses check-in saat ini tidak aktif.",
+            "Aktifkan kembali membership Anda:\n{$paymentUrl}",
         );
     }
 
