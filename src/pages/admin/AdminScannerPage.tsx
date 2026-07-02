@@ -82,6 +82,8 @@ export const AdminScannerPage = () => {
   const [lastDetectedCode, setLastDetectedCode] = useState('');
   const [scannedMemberId, setScannedMemberId] = useState<number | null>(null);
   const [lastDetectionAt, setLastDetectionAt] = useState<number | null>(null);
+  const [manualInput, setManualInput] = useState('');
+  const [manualLoading, setManualLoading] = useState(false);
   const pulseTimeoutRef = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -131,6 +133,15 @@ export const AdminScannerPage = () => {
     },
     [],
   );
+
+  const handleManualSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualInput.trim()) return;
+    setManualLoading(true);
+    await processQrCode(manualInput.trim());
+    setManualInput('');
+    setManualLoading(false);
+  };
 
   const stopCamera = useCallback(() => {
     startRequestedRef.current = false;
@@ -461,6 +472,33 @@ export const AdminScannerPage = () => {
             </div>
           </div>
           <p className="scanner-camera-note">{cameraMessage}</p>
+
+          {/* Manual input fallback — selalu tersedia */}
+          <form onSubmit={handleManualSubmit} style={{ padding: '0.75rem', borderTop: '1px solid var(--line-soft)', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <input
+              type="text"
+              placeholder="Paste / ketik QR code manual... (contoh: GF|member:1|membership:1)"
+              value={manualInput}
+              onChange={(e) => setManualInput(e.target.value)}
+              style={{
+                flex: 1,
+                padding: '0.45rem 0.75rem',
+                borderRadius: '999px',
+                border: '1px solid var(--line-soft)',
+                fontSize: '0.82rem',
+                outline: 'none',
+                background: 'var(--bg-card, #fff)',
+              }}
+            />
+            <button
+              type="submit"
+              className="button-primary"
+              disabled={manualLoading || !manualInput.trim()}
+              style={{ whiteSpace: 'nowrap', padding: '0.45rem 1rem', fontSize: '0.82rem' }}
+            >
+              {manualLoading ? '...' : 'Scan'}
+            </button>
+          </form>
           <div className="scanner-meta-strip">
             <div>
               <small>Validasi</small>
