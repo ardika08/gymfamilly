@@ -1101,7 +1101,8 @@ button {
   position: sticky;
   top: 0;
   align-self: start;
-  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
   background:
     radial-gradient(circle at top left, rgba(171, 24, 42, 0.1), transparent 28%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 255, 0.98));
