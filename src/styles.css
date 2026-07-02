@@ -1497,7 +1497,8 @@ button {
 
 .dashboard-banner {
   border-radius: 1.1rem;
-  padding: 0.82rem 1rem;
+  padding: 1.25rem 1.5rem;
+  margin-top: 0.5rem;
   display: flex;
   justify-content: space-between;
   gap: 1rem;
