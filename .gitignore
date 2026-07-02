@@ -12,5 +12,5 @@
 /yarn-error.log
 /.idea
 /.vscode
-/dist
+# /dist — included for cPanel deploy (built assets)
 *.log

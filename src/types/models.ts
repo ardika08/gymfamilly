@@ -36,6 +36,7 @@ export interface Membership {
   tanggal_berakhir?: string | null;
   status: MembershipStatus;
   payment_method?: string | null;
+  payment_channel?: string | null;
   payment_proof?: string | null;
   payment_url?: string | null;
   voucher_id?: number | null;

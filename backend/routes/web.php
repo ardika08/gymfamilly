@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Catch-all: serve React SPA for all non-API routes
+Route::get('/{any}', function () {
+    return view('spa');
+})->where('any', '.*');
