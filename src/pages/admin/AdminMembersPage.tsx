@@ -141,8 +141,7 @@ export const AdminMembersPage = () => {
             <span className="eyebrow">Kelola member</span>
             <h3>Perbarui data member tanpa keluar dari dashboard.</h3>
             <p>
-              Edit nama, email, dan WhatsApp member. Untuk aksi hapus, versi aman yang
-              dipakai saat ini adalah nonaktifkan akun.
+              Edit nama, email, dan WhatsApp member. Untuk menonaktifkan akses, gunakan tombol nonaktifkan di bawah.
             </p>
             <div className="trend-summary">
               <div className="list-item">

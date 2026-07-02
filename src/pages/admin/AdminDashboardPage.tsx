@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { PageHeader } from '../../components/ui/PageHeader';
 import { StatCard } from '../../components/ui/StatCard';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { adminService } from '../../services/api';
@@ -69,21 +68,7 @@ export const AdminDashboardPage = () => {
         </button>
       </section>
 
-      <PageHeader
-        eyebrow="Dashboard Admin"
-        title="Kontrol operasional Gym Familly"
-        description="Ringkasan utama pembayaran, pendapatan, dan check-in."
-        actions={
-          <div className="dashboard-inline-tools">
-            <button type="button" className="button-filter">
-              27/05/2026
-            </button>
-            <button type="button" className="button-filter">
-              30 Hari
-            </button>
-          </div>
-        }
-      />
+
       <div className="stats-grid">
         <StatCard
           label="Member Aktif"
@@ -93,7 +78,7 @@ export const AdminDashboardPage = () => {
         <StatCard
           label="Pembayaran Pending"
           value={`${summary?.pendingPayments ?? 0}`}
-          hint="Butuh verifikasi transfer manual."
+          hint="Transaksi yang menunggu konfirmasi pembayaran."
         />
         <StatCard
           label="Pendapatan"
@@ -216,10 +201,6 @@ export const AdminDashboardPage = () => {
               <span>Total pendapatan</span>
               <strong>{currency.format(summary?.monthlyRevenue ?? 0)}</strong>
             </div>
-            <div>
-              <span>Pertumbuhan</span>
-              <strong>+20.1%</strong>
-            </div>
           </div>
         </article>
       </section>
@@ -234,7 +215,7 @@ export const AdminDashboardPage = () => {
           </div>
           <div className="task-list">
             <div className="task-row">
-              <strong>Verifikasi pembayaran manual</strong>
+              <strong>Verifikasi pembayaran</strong>
               <span>{summary?.pendingPayments ?? 0} transaksi menunggu</span>
             </div>
             <div className="task-row">
@@ -257,19 +238,19 @@ export const AdminDashboardPage = () => {
           </div>
           <div className="mini-metric-grid">
             <div className="mini-metric">
-              <span>Konversi</span>
-              <strong>74%</strong>
+              <span>Member aktif</span>
+              <strong>{summary?.activeMembers ?? 0}</strong>
             </div>
             <div className="mini-metric">
-              <span>Member kembali</span>
-              <strong>61%</strong>
+              <span>Pending bayar</span>
+              <strong>{summary?.pendingPayments ?? 0}</strong>
             </div>
             <div className="mini-metric">
-              <span>Reminder WA</span>
-              <strong>{summary?.expiringSoonCount ?? 0} antrean</strong>
+              <span>Jatuh tempo H-3</span>
+              <strong>{summary?.expiringSoonCount ?? 0} member</strong>
             </div>
             <div className="mini-metric">
-              <span>Sinyal member</span>
+              <span>Kondisi</span>
               <strong>{expiringMembers.length > 0 ? 'Perlu follow-up' : 'Stabil'}</strong>
             </div>
           </div>

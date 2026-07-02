@@ -40,7 +40,7 @@ export const AdminPaymentsPage = () => {
       <PageHeader
         eyebrow="Pembayaran"
         title="Riwayat transaksi Duitku"
-        description="Semua transaksi membership via Duitku — status diperbarui otomatis dari webhook."
+        description="Semua transaksi membership — status diperbarui otomatis setelah pembayaran terkonfirmasi."
       />
 
       {/* Stats */}
@@ -77,7 +77,7 @@ export const AdminPaymentsPage = () => {
                     ? `Menunggu (${pendingCount})`
                     : f === 'aktif'
                       ? `Aktif (${aktifCount})`
-                      : `Kadaluarsa (${payments.filter((p) => p.status === 'kedaluwarsa').length})`}
+                      : `Kedaluwarsa (${payments.filter((p) => p.status === 'kedaluwarsa').length})`}
               </button>
             ))}
           </div>
