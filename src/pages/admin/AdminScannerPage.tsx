@@ -84,6 +84,12 @@ export const AdminScannerPage = () => {
   const [lastDetectionAt, setLastDetectionAt] = useState<number | null>(null);
   const [manualInput, setManualInput] = useState('');
   const [manualLoading, setManualLoading] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    tone: 'success' | 'warning' | 'danger';
+    memberName?: string;
+  } | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
   const pulseTimeoutRef = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -108,6 +114,20 @@ export const AdminScannerPage = () => {
       })),
     [members, recentScans],
   );
+
+  const showToast = useCallback((
+    message: string,
+    tone: 'success' | 'warning' | 'danger',
+    memberName?: string,
+  ) => {
+    if (toastTimeoutRef.current) {
+      window.clearTimeout(toastTimeoutRef.current);
+    }
+    setToast({ message, tone, memberName });
+    toastTimeoutRef.current = window.setTimeout(() => {
+      setToast(null);
+    }, 3500);
+  }, []);
 
   const triggerScanFeedback = useCallback((tone: Exclude<ScanResultTone, 'idle'>) => {
     setScanPulseTone(tone);
@@ -190,11 +210,13 @@ export const AdminScannerPage = () => {
       try {
         const log = await attendanceService.createCheckInByQr(qrCode);
         await refreshScannedMemberContext(log.user_id);
+        const memberName = members.find((m) => m.id === log.user_id)?.nama;
         setResult({
           message: log.catatan ?? 'Check-in berhasil dicatat. Member boleh masuk gym.',
           tone: 'success',
           timestamp: log.waktu_scan,
         });
+        showToast('Check-in berhasil!', 'success', memberName);
         setCameraMessage('QR berhasil dipindai. Arahkan ke member berikutnya untuk scan berikutnya.');
         triggerScanFeedback('success');
         await refreshRecentScans();
@@ -207,6 +229,7 @@ export const AdminScannerPage = () => {
           tone,
           timestamp: new Date().toISOString(),
         });
+        showToast(message, tone);
         setCameraMessage('QR terdeteksi tetapi validasi ditolak. Periksa status membership member.');
         triggerScanFeedback(tone);
         await refreshRecentScans();
@@ -216,7 +239,7 @@ export const AdminScannerPage = () => {
         }, 900);
       }
     },
-    [refreshRecentScans, refreshScannedMemberContext, triggerScanFeedback],
+    [refreshRecentScans, refreshScannedMemberContext, triggerScanFeedback, showToast, members],
   );
 
   const scanFrame = useCallback(async () => {
@@ -629,6 +652,59 @@ export const AdminScannerPage = () => {
           )}
         </div>
       </section>
+
+      {/* Toast Notification Overlay */}
+      {toast && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '2rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            background:
+              toast.tone === 'success'
+                ? 'linear-gradient(135deg, #10b981, #059669)'
+                : toast.tone === 'warning'
+                  ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                  : 'linear-gradient(135deg, #ef4444, #dc2626)',
+            color: '#fff',
+            padding: '1rem 1.5rem',
+            borderRadius: '1rem',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+            minWidth: '320px',
+            maxWidth: '90vw',
+            animation: 'slideInDown 0.3s ease-out',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '1.5rem' }}>
+              {toast.tone === 'success' ? '✓' : toast.tone === 'warning' ? '⚠' : '✕'}
+            </span>
+            <div>
+              <strong style={{ display: 'block', fontSize: '1rem', marginBottom: '0.25rem' }}>
+                {toast.message}
+              </strong>
+              {toast.memberName && (
+                <small style={{ opacity: 0.9, fontSize: '0.85rem' }}>{toast.memberName}</small>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideInDown {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };
