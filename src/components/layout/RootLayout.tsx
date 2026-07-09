@@ -123,6 +123,11 @@ export const RootLayout = () => {
 
       <footer className="footer public-footer">
         <p>Registrasi, pembayaran, barcode, dan operasional gym dalam satu sistem.</p>
+        <div className="public-footer-contact">
+          <span>📧 <a href="mailto:gymfamily73@gmail.com">gymfamily73@gmail.com</a></span>
+          <span>📞 <a href="tel:082228489993">082228489993</a></span>
+          <span>📍 Jl. Raya Peusar Rt04/Rw 01, Desa Peusar, Kec. Panongan, Kab. Tangerang, Banten 15710</span>
+        </div>
         <small className="public-copyright">© {currentYear} Gym Familly</small>
       </footer>
     </div>

@@ -360,6 +360,32 @@ button {
   margin-top: 0.15rem;
 }
 
+.public-footer-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.4rem 0 0.2rem;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.public-footer-contact span {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  line-height: 1.45;
+}
+
+.public-footer-contact a {
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.public-footer-contact a:hover {
+  color: var(--brand-primary);
+  text-decoration: underline;
+}
+
 .footer {
   padding: 1rem 0 2rem;
   color: #5a6d67;
