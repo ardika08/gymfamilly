@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Expense;
+use App\Models\GymPackage;
 use App\Models\Membership;
 use App\Models\User;
 use App\Services\MembershipService;
@@ -210,6 +211,11 @@ class AdminController extends Controller
         ]);
     }
 
+    public function expenses()
+    {
+        return ApiResponse::success(Expense::query()->orderByDesc('tanggal')->get());
+    }
+
     public function createExpense(Request $request)
     {
         $validated = $request->validate([
@@ -222,5 +228,33 @@ class AdminController extends Controller
         $expense = Expense::create($validated);
 
         return ApiResponse::success($expense, 'Pengeluaran berhasil ditambahkan.', 201);
+    }
+
+    public function expiringMembers()
+    {
+        $today = Carbon::today();
+        $threshold = $today->copy()->addDays(3);
+
+        $members = User::query()->where('role', 'member')->get();
+
+        $result = $members->map(function (User $user) use ($today, $threshold) {
+            $membership = $user->memberships()
+                ->where('status', 'aktif')
+                ->whereDate('tanggal_berakhir', '>=', $today)
+                ->whereDate('tanggal_berakhir', '<=', $threshold)
+                ->latest('id')
+                ->first();
+
+            return [
+                'member'     => GymPayload::user($user),
+                'membership' => $membership ? [
+                    'id'                => $membership->id,
+                    'tanggal_berakhir'  => $membership->tanggal_berakhir?->format('Y-m-d'),
+                    'status'            => $membership->status,
+                ] : null,
+            ];
+        })->filter(fn ($item) => $item['membership'] !== null)->values();
+
+        return ApiResponse::success($result);
     }
 }

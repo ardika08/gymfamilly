@@ -463,7 +463,7 @@ export const messageService = {
       });
     }
 
-    return apiPost<Message>('/api/messages/send', {
+    return apiPost<Message>('/api/member/messages/send', {
       isi_pesan,
     });
   },

@@ -38,6 +38,7 @@ class GymPayload
             'tanggal_berakhir' => $membership->tanggal_berakhir?->format('Y-m-d'),
             'status' => $membership->status,
             'payment_method' => $membership->payment_method,
+            'payment_channel' => $membership->payment_channel,
             'payment_proof' => $membership->payment_proof
                 ? Storage::disk('public')->url($membership->payment_proof)
                 : null,

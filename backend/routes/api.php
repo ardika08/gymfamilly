@@ -38,7 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/member/barcode', [MembershipController::class, 'barcode']);
         Route::get('/member/attendances', [AttendanceController::class, 'memberAttendances']);
         Route::get('/member/messages', [MessageController::class, 'memberMessages']);
-        Route::post('/messages/send', [MessageController::class, 'sendToAdmin']);
+        Route::post('/member/messages/send', [MessageController::class, 'sendToAdmin']);
     });
 
     Route::middleware('role:admin')->group(function () {
