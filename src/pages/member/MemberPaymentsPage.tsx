@@ -220,7 +220,7 @@ export const MemberPaymentsPage = () => {
               <select
                 value={selectedDuitkuMethod}
                 onChange={(e) => setSelectedDuitkuMethod(e.target.value)}
-                disabled={hasActiveMembership || duitkuMethods.length === 0}
+                disabled={duitkuMethods.length === 0}
               >
                 {duitkuMethods.length === 0 ? (
                   <option value="">Memuat metode pembayaran...</option>
