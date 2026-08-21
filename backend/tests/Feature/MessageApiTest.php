@@ -18,7 +18,7 @@ class MessageApiTest extends TestCase
         $memberToken = $member->createToken('member')->plainTextToken;
 
         $send = $this->withHeader('Authorization', 'Bearer '.$memberToken)
-            ->postJson('/api/messages/send', [
+            ->postJson('/api/member/messages/send', [
                 'isi_pesan' => 'Halo admin',
             ]);
 
