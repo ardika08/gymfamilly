@@ -161,11 +161,56 @@ class DuitkuController extends Controller
 
         $result = $this->duitku->checkTransaction($membership->merchant_order_id);
 
+        // Jaring pengaman: kalau webhook Duitku gagal masuk (server down / limit
+        // proses hosting), aktivasi tetap jalan lewat polling frontend.
+        if (($result['status_code'] ?? null) === '00' && $membership->status !== 'aktif') {
+            $this->activateMembership($membership, $result['reference'] ?? $membership->duitku_reference);
+            $membership->refresh();
+        }
+
         return ApiResponse::success([
             'membership' => GymPayload::membership($membership),
             'transaction_status' => $result['status_code'] ?? null,
             'status_message' => $result['status_message'] ?? null,
         ]);
+    }
+
+    /**
+     * Nominal yang seharusnya dibayar member: harga paket dikurangi diskon voucher.
+     * Mengikuti perhitungan yang dipakai saat checkout.
+     */
+    private function expectedAmountFor(Membership $membership): int
+    {
+        $package = $membership->package;
+        $harga = $package->harga_promo ?? $package->harga_normal;
+
+        return max(1000, (int) $harga - (int) $membership->voucher_diskon);
+    }
+
+    /**
+     * Aktifkan membership setelah pembayaran terkonfirmasi + kirim notifikasi WA.
+     * Dipakai webhook maupun polling checkStatus.
+     */
+    private function activateMembership(Membership $membership, ?string $reference): void
+    {
+        $membership->update([
+            'status'           => 'aktif',
+            'tanggal_mulai'    => now()->format('Y-m-d'),
+            'tanggal_berakhir' => $this->memberships->calculateEndDate($membership->package),
+            'duitku_reference' => $reference,
+            'verified_at'      => now(),
+            'paid_at'          => now(),
+            'payment_url'      => null, // hapus URL setelah bayar
+        ]);
+
+        if ($membership->user) {
+            $this->starsender->send(
+                $membership->user,
+                'payment_verified',
+                $this->templates->paymentVerified($membership->user, $membership, $membership->package),
+                ['membership_id' => $membership->id, 'via' => 'duitku'],
+            );
+        }
     }
 
     /**
@@ -203,27 +248,34 @@ class DuitkuController extends Controller
             return response()->json(['message' => 'Order not found.'], 404);
         }
 
-        // resultCode '00' = sukses
-        if ($resultCode === '00') {
-            $membership->update([
-                'status'           => 'aktif',
-                'tanggal_mulai'    => now()->format('Y-m-d'),
-                'tanggal_berakhir' => $this->memberships->calculateEndDate($membership->package),
-                'duitku_reference' => $reference,
-                'verified_at'      => now(),
-                'paid_at'          => now(),
-                'payment_url'      => null, // hapus URL setelah bayar
+        // Verifikasi nominal callback sesuai tagihan paket (harga - diskon voucher)
+        $expectedAmount = $this->expectedAmountFor($membership);
+
+        if ((int) $amount !== $expectedAmount) {
+            Log::warning('Duitku webhook: amount mismatch', [
+                'merchantOrderId' => $merchantOrderId,
+                'expected' => $expectedAmount,
+                'received' => (int) $amount,
             ]);
 
-            // Kirim notifikasi WhatsApp ke member
-            if ($membership->user) {
-                $this->starsender->send(
-                    $membership->user,
-                    'payment_verified',
-                    $this->templates->paymentVerified($membership->user, $membership, $membership->package),
-                    ['membership_id' => $membership->id, 'via' => 'duitku'],
-                );
-            }
+            return response()->json(['message' => 'Amount mismatch.'], 422);
+        }
+
+        // Idempotency: callback bisa dikirim berulang oleh Duitku.
+        // Membership yang sudah aktif tidak boleh di-update lagi — mencegah
+        // masa aktif ter-reset dan notifikasi WA terkirim dobel.
+        if ($membership->status === 'aktif') {
+            Log::info('Duitku webhook: ignored, membership already active', [
+                'merchantOrderId' => $merchantOrderId,
+                'membership_id' => $membership->id,
+            ]);
+
+            return response()->json(['message' => 'OK']);
+        }
+
+        // resultCode '00' = sukses
+        if ($resultCode === '00') {
+            $this->activateMembership($membership, $reference);
 
             Log::info('Duitku webhook: payment success', [
                 'merchantOrderId' => $merchantOrderId,

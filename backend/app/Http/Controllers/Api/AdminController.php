@@ -142,36 +142,6 @@ class AdminController extends Controller
         return ApiResponse::success(GymPayload::membership($membership->fresh()), 'Pembayaran berhasil diverifikasi.');
     }
 
-    public function expiringMembers()
-    {
-        $items = User::query()->where('role', 'member')->get()
-            ->map(function (User $member) {
-                $membership = $this->memberships->currentForUser($member);
-
-                return [
-                    'member' => GymPayload::user($member),
-                    'membership' => GymPayload::membership($membership),
-                ];
-            })
-            ->filter(function (array $row) {
-                if (! $row['membership']) {
-                    return false;
-                }
-
-                $membership = Membership::find($row['membership']['id']);
-
-                return $this->memberships->isExpiringSoon($membership);
-            })
-            ->values();
-
-        return ApiResponse::success($items);
-    }
-
-    public function expenses()
-    {
-        return ApiResponse::success(Expense::query()->latest('tanggal')->get());
-    }
-
     public function trends()
     {
         $today = Carbon::today();
