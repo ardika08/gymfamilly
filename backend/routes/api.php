@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/membership/checkout', [MembershipController::class, 'checkout']);
         Route::post('/membership/upload-proof', [MembershipController::class, 'uploadProof']);
         Route::post('/membership/duitku/checkout', [\App\Http\Controllers\Api\DuitkuController::class, 'checkout']);
+        Route::post('/membership/duitku/payment-reminder', [\App\Http\Controllers\Api\DuitkuController::class, 'paymentReminder']);
         Route::get('/membership/duitku/payment-methods', [\App\Http\Controllers\Api\DuitkuController::class, 'paymentMethods']);
         Route::post('/membership/duitku/check-status', [\App\Http\Controllers\Api\DuitkuController::class, 'checkStatus']);
         Route::get('/member/barcode', [MembershipController::class, 'barcode']);

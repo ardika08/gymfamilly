@@ -417,6 +417,9 @@ export const duitkuService = {
       status_message: string | null;
     }>('/api/membership/duitku/check-status', { membershipId });
   },
+  async sendPaymentReminder(membershipId: number) {
+    return apiPost<{ sent: boolean }>('/api/membership/duitku/payment-reminder', { membershipId });
+  },
 };
 
 export const attendanceService = {

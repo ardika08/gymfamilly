@@ -213,6 +213,30 @@ class DuitkuController extends Controller
         }
     }
 
+    public function paymentReminder(Request $request)
+    {
+        $validated = $request->validate(['membershipId' => ['required', 'integer']]);
+        $membership = Membership::with(['user', 'package'])
+            ->where('user_id', $request->user()->id)
+            ->whereKey($validated['membershipId'])
+            ->where('status', 'menunggu_pembayaran')
+            ->whereNotNull('payment_url')
+            ->first();
+
+        if (! $membership) {
+            return ApiResponse::error('Transaksi pembayaran tidak ditemukan atau sudah tidak aktif.', 404);
+        }
+
+        $log = $this->starsender->send(
+            $membership->user,
+            'payment_reminder',
+            $this->templates->paymentReminder($membership->user, $membership, $membership->package),
+            ['membership_id' => $membership->id, 'via' => 'duitku'],
+        );
+
+        return ApiResponse::success(['sent' => in_array($log->status, ['queued', 'sent'], true)]);
+    }
+
     /**
      * Webhook callback dari Duitku.
      * Dipanggil otomatis oleh Duitku setelah pembayaran berhasil/gagal.

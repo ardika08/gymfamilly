@@ -35,6 +35,17 @@ class WhatsAppTemplateService
         );
     }
 
+    public function paymentReminder(User $user, Membership $membership, GymPackage $package): string
+    {
+        $amount = max(1000, (int) (($package->harga_promo ?? $package->harga_normal) - ($membership->voucher_diskon ?? 0)));
+        return $this->compose(
+            "Halo {$user->nama},",
+            'Berikut informasi pembayaran membership Gym Familly Anda:',
+            "📦 Paket: *{$package->nama_paket}*\n💳 Metode: *{$membership->payment_channel}*\n💰 Total: *Rp ".number_format($amount, 0, ',', '.')."*",
+            "🔗 Link pembayaran Duitku:\n{$membership->payment_url}\n\nSilakan selesaikan pembayaran melalui link tersebut.",
+        );
+    }
+
     public function checkInSuccess(User $user, Attendance $attendance): string
     {
         $scanDateTime = $this->formatDateTime($attendance->waktu_scan);

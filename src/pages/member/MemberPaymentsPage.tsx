@@ -29,6 +29,7 @@ export const MemberPaymentsPage = () => {
   >([]);
   const [selectedDuitkuMethod, setSelectedDuitkuMethod] = useState('');
   const [duitkuLoading, setDuitkuLoading] = useState(false);
+  const [reminderLoading, setReminderLoading] = useState<number | null>(null);
 
   // Voucher
   const [voucherKode, setVoucherKode] = useState('');
@@ -135,6 +136,19 @@ export const MemberPaymentsPage = () => {
       setShowBlockedModal(true);
     } finally {
       setDuitkuLoading(false);
+    }
+  };
+
+  const handlePaymentReminder = async (membershipId: number) => {
+    setReminderLoading(membershipId);
+    try {
+      await duitkuService.sendPaymentReminder(membershipId);
+      setSuccess('Informasi pembayaran berhasil dikirim melalui WhatsApp.');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Gagal mengirim informasi pembayaran.');
+      setShowBlockedModal(true);
+    } finally {
+      setReminderLoading(null);
     }
   };
 
@@ -403,13 +417,14 @@ export const MemberPaymentsPage = () => {
                       </td>
                       <td>
                         {item.status === 'menunggu_pembayaran' && item.payment_url ? (
-                          <button
-                            type="button"
-                            className="table-action-button"
-                            onClick={() => window.open(item.payment_url!, '_blank')}
-                          >
-                            Lanjutkan Bayar
-                          </button>
+                          <div className="inline-actions">
+                            <button type="button" className="table-action-button" onClick={() => handlePaymentReminder(item.id)} disabled={reminderLoading === item.id}>
+                              {reminderLoading === item.id ? 'Mengirim...' : 'Kirim WA'}
+                            </button>
+                            <button type="button" className="table-action-button" onClick={() => window.open(item.payment_url!, '_blank')}>
+                              Lanjutkan Bayar
+                            </button>
+                          </div>
                         ) : (
                           <span className="table-chip subtle" style={{ opacity: 0.4 }}>—</span>
                         )}
