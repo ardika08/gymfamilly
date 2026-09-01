@@ -13,6 +13,33 @@ class AttendanceApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_member_history_excludes_rejected_scans(): void
+    {
+        $member = User::factory()->create();
+
+        \App\Models\Attendance::create([
+            'user_id' => $member->id,
+            'waktu_scan' => now()->subMinutes(2),
+            'hasil' => 'berhasil',
+            'catatan' => 'Validasi QR code berhasil',
+        ]);
+        \App\Models\Attendance::create([
+            'user_id' => $member->id,
+            'waktu_scan' => now(),
+            'hasil' => 'ditolak',
+            'catatan' => 'Member sudah check-in hari ini.',
+        ]);
+
+        $token = $member->createToken('test')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/member/attendances');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.hasil', 'berhasil');
+    }
+
     public function test_member_can_only_check_in_once_per_day(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

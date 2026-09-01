@@ -24,6 +24,7 @@ class AttendanceController extends Controller
     public function memberAttendances(Request $request)
     {
         $items = $request->user()->attendances()
+            ->where('hasil', 'berhasil')
             ->latest('waktu_scan')
             ->get()
             ->map(fn (Attendance $attendance) => GymPayload::attendance($attendance));
