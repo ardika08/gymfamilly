@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import jsQR from 'jsqr';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -17,6 +18,31 @@ type ScanPulseTone = Exclude<ScanResultTone, 'idle'> | null;
 type CameraState = 'idle' | 'loading' | 'ready' | 'error' | 'unsupported';
 type BarcodeDetectorCtor = new (options?: { formats?: string[] }) => {
   detect: (source: CanvasImageSource) => Promise<Array<{ rawValue?: string; format?: string }>>;
+};
+
+// Canvas reusable untuk jsQR fallback (dibuat sekali di module level)
+let _jsQrCanvas: HTMLCanvasElement | null = null;
+let _jsQrCtx: CanvasRenderingContext2D | null = null;
+const getJsQrCanvas = (w: number, h: number): CanvasRenderingContext2D | null => {
+  if (!_jsQrCanvas) {
+    _jsQrCanvas = document.createElement('canvas');
+    _jsQrCtx = _jsQrCanvas.getContext('2d', { willReadFrequently: true });
+  }
+  if (_jsQrCanvas.width !== w) _jsQrCanvas.width = w;
+  if (_jsQrCanvas.height !== h) _jsQrCanvas.height = h;
+  return _jsQrCtx;
+};
+
+const detectQrWithJsQr = (video: HTMLVideoElement): string | null => {
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  if (!w || !h) return null;
+  const ctx = getJsQrCanvas(w, h);
+  if (!ctx) return null;
+  ctx.drawImage(video, 0, 0, w, h);
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const result = jsQR(imageData.data, w, h, { inversionAttempts: 'dontInvert' });
+  return result?.data?.trim() || null;
 };
 
 const playBeep = (tone: Exclude<ScanResultTone, 'idle'>) => {
@@ -100,6 +126,7 @@ export const AdminScannerPage = () => {
   const processingRef = useRef(false);
   const pauseUntilRef = useRef(0);
   const lastPayloadRef = useRef<{ value: string; at: number } | null>(null);
+  const useJsQrRef = useRef(false);
   usePageTitle('Scan QR Member');
 
   const currentMember = members.find((member) => member.id === scannedMemberId) ?? null;
@@ -244,16 +271,25 @@ export const AdminScannerPage = () => {
 
   const scanFrame = useCallback(async () => {
     const video = videoRef.current;
-    const detector = detectorRef.current;
 
-    if (!video || !detector || cameraStateRef.current !== 'ready') {
+    if (!video || cameraStateRef.current !== 'ready') {
       return;
     }
 
     try {
       if (video.readyState >= 2 && !processingRef.current && Date.now() >= pauseUntilRef.current) {
-        const codes = await detector.detect(video);
-        const qrCode = codes.find((item) => typeof item.rawValue === 'string' && item.rawValue.trim())?.rawValue?.trim();
+        let qrCode: string | undefined;
+
+        if (useJsQrRef.current) {
+          // Fallback jsQR — support semua browser desktop/mobile
+          qrCode = detectQrWithJsQr(video) ?? undefined;
+        } else {
+          const detector = detectorRef.current;
+          if (detector) {
+            const codes = await detector.detect(video);
+            qrCode = codes.find((item) => typeof item.rawValue === 'string' && item.rawValue.trim())?.rawValue?.trim();
+          }
+        }
 
         if (qrCode) {
           void processQrCode(qrCode);
@@ -295,19 +331,21 @@ export const AdminScannerPage = () => {
 
     const BarcodeDetectorClass = (window as Window & { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector;
     if (!BarcodeDetectorClass) {
-      cameraStateRef.current = 'unsupported';
-      setCameraState('unsupported');
-      setCameraMessage('Browser ini belum mendukung scan QR otomatis. Gunakan Chrome Android terbaru saat publik nanti.');
-      return;
+      // Fallback ke jsQR — support semua browser desktop/mobile
+      useJsQrRef.current = true;
+    } else {
+      useJsQrRef.current = false;
     }
 
     startRequestedRef.current = true;
     cameraStateRef.current = 'loading';
     setCameraState('loading');
-    setCameraMessage('Membuka kamera belakang dan menyiapkan scan QR...');
+    setCameraMessage('Membuka kamera dan menyiapkan scan QR...');
 
     try {
-      detectorRef.current = new BarcodeDetectorClass({ formats: ['qr_code'] });
+      if (!useJsQrRef.current && BarcodeDetectorClass) {
+        detectorRef.current = new BarcodeDetectorClass({ formats: ['qr_code'] });
+      }
 
       let stream: MediaStream;
       try {
@@ -408,7 +446,7 @@ export const AdminScannerPage = () => {
     cameraState === 'loading'
       ? 'Kamera sedang disiapkan. Tunggu beberapa detik sampai pratinjau stabil.'
       : cameraState === 'unsupported'
-        ? 'Browser ini belum mendukung pembacaan QR otomatis. Gunakan Chrome Android terbaru untuk hasil terbaik.'
+     ? 'Browser ini belum mendukung pembacaan QR otomatis. Gunakan Chrome terbaru untuk hasil terbaik.'
         : cameraState === 'error'
           ? 'Kamera belum siap dipakai. Cek izin kamera, lalu aktifkan ulang scanner.'
           : result?.tone === 'danger'

@@ -11,7 +11,7 @@
       content="Gym Familly membantu member dan admin mengelola membership gym dengan cepat."
     />
     <title>Gym Familly</title>
-    <script type="module" crossorigin src="/assets/index-DKDCn2vI.js"></script>
+    <script type="module" crossorigin src="/assets/index-C8Qj15gB.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-Dxjt6y6l.css">
   </head>
   <body>
