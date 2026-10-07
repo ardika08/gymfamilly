@@ -21,7 +21,7 @@ class AdminPackageController extends Controller
             'promo_label' => ['nullable', 'string', 'max:255'],
             'harga_normal' => ['required', 'integer', 'min:0'],
             'harga_promo' => ['nullable', 'integer', 'min:0'],
-            'deskripsi' => ['required', 'string'],
+            'deskripsi' => ['nullable', 'string', 'max:2000'],
             'durasi_hari' => ['required', 'integer', 'min:1'],
         ]);
 
@@ -37,7 +37,7 @@ class AdminPackageController extends Controller
             'promo_label' => ['nullable', 'string', 'max:255'],
             'harga_normal' => ['required', 'integer', 'min:0'],
             'harga_promo' => ['nullable', 'integer', 'min:0'],
-            'deskripsi' => ['required', 'string'],
+            'deskripsi' => ['nullable', 'string', 'max:2000'],
             'durasi_hari' => ['required', 'integer', 'min:1'],
         ]);
 
