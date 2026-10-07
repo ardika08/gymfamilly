@@ -18,7 +18,7 @@ export const PackageCard = ({ item, action, adminAction }: PackageCardProps) => 
       {adminAction ? <div className="package-card-menu">{adminAction}</div> : null}
       <span className="package-chip">{item.promo_label?.trim() || 'Paket'}</span>
       <h3>{item.nama_paket}</h3>
-      <p>{item.deskripsi}</p>
+      {item.deskripsi ? <p>{item.deskripsi}</p> : null}
     </div>
     <div className="price-group">
       {item.harga_promo && item.harga_promo < item.harga_normal ? (

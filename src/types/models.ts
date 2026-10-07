@@ -23,7 +23,7 @@ export interface GymPackage {
   promo_label?: string | null;
   harga_normal: number;
   harga_promo?: number | null;
-  deskripsi: string;
+  deskripsi?: string | null;
   durasi_hari: number;
 }
 

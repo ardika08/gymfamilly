@@ -48,7 +48,7 @@ export const AdminPackagesPage = () => {
       promo_label: form.promo_label,
       harga_normal: Number(form.harga_normal),
       harga_promo: form.harga_promo ? Number(form.harga_promo) : null,
-      deskripsi: form.deskripsi,
+      deskripsi: form.deskripsi.trim() || null,
       durasi_hari: Number(form.durasi_hari),
     });
     resetForm();
@@ -128,9 +128,8 @@ export const AdminPackagesPage = () => {
               <input
                 value={form.deskripsi}
                 onChange={(event) => setForm({ ...form, deskripsi: event.target.value })}
-                required
               />
-              <small>Contoh: Akses harian atau bonus fasilitas.</small>
+              <small>Contoh: Akses harian atau bonus fasilitas. Boleh dikosongkan.</small>
             </label>
             <label>
               <span>Durasi Membership (hari)</span>
@@ -185,7 +184,7 @@ export const AdminPackagesPage = () => {
                           promo_label: item.promo_label ?? 'Promo',
                           harga_normal: String(item.harga_normal),
                           harga_promo: item.harga_promo ? String(item.harga_promo) : '',
-                          deskripsi: item.deskripsi,
+                          deskripsi: item.deskripsi ?? '',
                           durasi_hari: String(item.durasi_hari ?? 30),
                         });
                         setOpenMenuId(null);
