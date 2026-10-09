@@ -49,6 +49,7 @@ return [
         'callback_url' => env('DUITKU_CALLBACK_URL'),
         'return_url' => env('DUITKU_RETURN_URL'),
         'expiry_period' => env('DUITKU_EXPIRY_MINUTES', 1440),
+        'expiry_grace_minutes' => env('DUITKU_EXPIRY_GRACE_MINUTES', 5),
     ],
 
     'internal' => [

@@ -45,6 +45,20 @@ class DuitkuController extends Controller
             return ApiResponse::error('Membership aktif masih berjalan.', 422);
         }
 
+        $expiryCutoff = now()->subMinutes(
+            (int) config('services.duitku.expiry_period', 1440)
+            + (int) config('services.duitku.expiry_grace_minutes', 5)
+        );
+
+        $request->user()->memberships()
+            ->where('status', 'menunggu_pembayaran')
+            ->where('payment_method', 'duitku')
+            ->where('created_at', '<=', $expiryCutoff)
+            ->update([
+                'status' => 'kedaluwarsa',
+                'payment_url' => null,
+            ]);
+
         $anyPending = $request->user()->memberships()
             ->where('status', 'menunggu_pembayaran')
             ->exists();

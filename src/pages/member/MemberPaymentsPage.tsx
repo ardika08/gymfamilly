@@ -120,14 +120,11 @@ export const MemberPaymentsPage = () => {
       );
 
       if (result.payment_url) {
-        setSuccess('Transaksi berhasil dibuat. Kamu akan diarahkan ke halaman pembayaran...');
-        window.setTimeout(() => {
-          window.open(result.payment_url!, '_blank');
-        }, 1000);
-      } else {
-        setSuccess('Transaksi dibuat. Gunakan informasi berikut untuk menyelesaikan pembayaran.');
+        window.location.assign(result.payment_url);
+        return;
       }
 
+      setSuccess('Transaksi dibuat. Gunakan informasi berikut untuk menyelesaikan pembayaran.');
       refresh();
     } catch (error) {
       setErrorMessage(
@@ -421,7 +418,7 @@ export const MemberPaymentsPage = () => {
                             <button type="button" className="table-action-button" onClick={() => handlePaymentReminder(item.id)} disabled={reminderLoading === item.id}>
                               {reminderLoading === item.id ? 'Mengirim...' : 'Kirim WA'}
                             </button>
-                            <button type="button" className="table-action-button" onClick={() => window.open(item.payment_url!, '_blank')}>
+                            <button type="button" className="table-action-button" onClick={() => window.location.assign(item.payment_url!)}>
                               Lanjutkan Bayar
                             </button>
                           </div>

@@ -235,9 +235,9 @@ export const AdminFinancePage = () => {
   const selectedMember = members.find((member) => member.id === selectedMemberId) ?? null;
 
   const memberSummary = useMemo(() => {
-    const total = memberTransactions.reduce((sum, payment) => sum + payment.amount, 0);
-    const active = memberTransactions.filter((payment) => payment.status === 'aktif').length;
-    return { total, active, count: memberTransactions.length };
+    const activePayments = memberTransactions.filter((payment) => payment.status === 'aktif');
+    const total = activePayments.reduce((sum, payment) => sum + payment.amount, 0);
+    return { total, active: activePayments.length, count: memberTransactions.length };
   }, [memberTransactions]);
 
   const buildRows = (source: typeof filteredPayments) =>
@@ -758,7 +758,13 @@ export const AdminFinancePage = () => {
                     <td>
                       <div className="finance-table-amount">
                         <strong>{currency.format(payment.amount)}</strong>
-                        <small>Pembayaran member</small>
+                        <small>
+                          {payment.status === 'aktif'
+                            ? 'Pembayaran berhasil'
+                            : payment.status === 'menunggu_pembayaran'
+                              ? 'Nilai tagihan — belum dibayar'
+                              : 'Transaksi tidak aktif'}
+                        </small>
                       </div>
                     </td>
                     <td>
