@@ -17,6 +17,8 @@ export const AdminPaymentsPage = () => {
     startDate: string;
     endDate: string;
   } | null>(null);
+  const [verificationError, setVerificationError] = useState('');
+  const [verifyingId, setVerifyingId] = useState<number | null>(null);
   const [filter, setFilter] = useState<'semua' | 'menunggu_pembayaran' | 'aktif' | 'kedaluwarsa'>('semua');
   usePageTitle('Riwayat Pembayaran');
 
@@ -42,6 +44,19 @@ export const AdminPaymentsPage = () => {
         title="Riwayat transaksi Duitku"
         description="Semua transaksi membership — status diperbarui otomatis setelah pembayaran terkonfirmasi."
       />
+
+      {verificationError ? (
+        <section className="section-intro-card warning">
+          <div>
+            <small>Verifikasi ditolak</small>
+            <strong>{verificationError}</strong>
+            <p>Membership tetap belum aktif sampai pembayaran terkonfirmasi berhasil.</p>
+          </div>
+          <button type="button" className="button-filter" onClick={() => setVerificationError('')}>
+            Tutup
+          </button>
+        </section>
+      ) : null}
 
       {/* Stats */}
       <section className="section-intro-card">
@@ -164,19 +179,36 @@ export const AdminPaymentsPage = () => {
                           <button
                             type="button"
                             className="table-action-button"
-                            title="Aktifkan manual jika webhook Duitku gagal"
+                            title={item.payment_method === 'duitku' ? 'Cek status pembayaran ke Duitku' : 'Aktifkan pembayaran manual'}
+                            disabled={verifyingId === item.id}
                             onClick={async () => {
-                              const verified = await adminService.verifyPayment(item.id);
-                              setSuccessModal({
-                                memberName: member?.nama ?? 'Member',
-                                packageName: pkg?.nama_paket ?? 'Membership',
-                                startDate: formatDisplayDate(verified.tanggal_mulai),
-                                endDate: formatDisplayDate(verified.tanggal_berakhir),
-                              });
-                              refresh();
+                              setVerifyingId(item.id);
+                              setVerificationError('');
+                              try {
+                                const verified = await adminService.verifyPayment(item.id);
+                                setSuccessModal({
+                                  memberName: member?.nama ?? 'Member',
+                                  packageName: pkg?.nama_paket ?? 'Membership',
+                                  startDate: formatDisplayDate(verified.tanggal_mulai),
+                                  endDate: formatDisplayDate(verified.tanggal_berakhir),
+                                });
+                                refresh();
+                              } catch (error) {
+                                setVerificationError(
+                                  error instanceof Error
+                                    ? error.message
+                                    : 'Status pembayaran tidak dapat diverifikasi.',
+                                );
+                              } finally {
+                                setVerifyingId(null);
+                              }
                             }}
                           >
-                            Aktifkan
+                            {verifyingId === item.id
+                              ? 'Memeriksa...'
+                              : item.payment_method === 'duitku'
+                                ? 'Verifikasi Duitku'
+                                : 'Aktifkan Manual'}
                           </button>
                         ) : (
                           <span className="table-chip subtle" style={{ opacity: 0.4 }}>—</span>
@@ -198,9 +230,9 @@ export const AdminPaymentsPage = () => {
             className="proof-modal-card success-modal-card"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="success-modal-badge">Membership Diaktifkan</div>
+            <div className="success-modal-badge">Pembayaran Terverifikasi</div>
             <h3>Status member sudah aktif</h3>
-            <p>Membership berhasil diaktifkan secara manual.</p>
+            <p>Pembayaran sudah diverifikasi dan membership berhasil diaktifkan.</p>
             <div className="mini-metric-grid">
               <div className="mini-metric">
                 <span>Member</span>

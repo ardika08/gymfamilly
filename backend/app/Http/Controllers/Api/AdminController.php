@@ -8,6 +8,7 @@ use App\Models\Expense;
 use App\Models\GymPackage;
 use App\Models\Membership;
 use App\Models\User;
+use App\Services\DuitkuService;
 use App\Services\MembershipService;
 use App\Services\StarsenderService;
 use App\Services\WhatsAppTemplateService;
@@ -20,6 +21,7 @@ class AdminController extends Controller
 {
     public function __construct(
         private readonly MembershipService $memberships,
+        private readonly DuitkuService $duitku,
         private readonly StarsenderService $starsender,
         private readonly WhatsAppTemplateService $templates,
     ) {}
@@ -125,11 +127,58 @@ class AdminController extends Controller
         ]);
 
         $membership = Membership::with(['user', 'package'])->findOrFail($validated['membershipId']);
+
+        if ($membership->status === 'aktif') {
+            return ApiResponse::error('Membership ini sudah aktif.', 422);
+        }
+
+        $duitkuResult = null;
+        if ($membership->payment_method === 'duitku') {
+            if (!$membership->merchant_order_id) {
+                return ApiResponse::error('Transaksi Duitku tidak memiliki nomor order yang valid.', 422);
+            }
+
+            $duitkuResult = $this->duitku->checkTransaction($membership->merchant_order_id);
+            if (!$duitkuResult['success']) {
+                return ApiResponse::error(
+                    $duitkuResult['message'] ?? 'Status pembayaran Duitku tidak dapat diverifikasi.',
+                    503
+                );
+            }
+
+            if (($duitkuResult['status_code'] ?? null) !== '00') {
+                $statusMessage = $duitkuResult['status_message'] ?? 'BELUM BERHASIL';
+
+                return ApiResponse::error(
+                    "Pembayaran Duitku belum berhasil. Status saat ini: {$statusMessage}.",
+                    422
+                );
+            }
+
+            $basePrice = $membership->package->harga_promo
+                ?? $membership->package->harga_normal;
+            $expectedAmount = max(1000, $basePrice - (int) ($membership->voucher_diskon ?? 0));
+            if ((int) ($duitkuResult['amount'] ?? 0) !== $expectedAmount) {
+                return ApiResponse::error(
+                    'Nominal pembayaran Duitku tidak sesuai dengan tagihan.',
+                    422
+                );
+            }
+        }
+
+        $now = now();
         $membership->update([
             'status' => 'aktif',
-            'tanggal_mulai' => now()->format('Y-m-d'),
+            'tanggal_mulai' => $now->format('Y-m-d'),
             'tanggal_berakhir' => $this->memberships->calculateEndDate($membership->package),
-            'verified_at' => now(),
+            'verified_at' => $now,
+            'paid_at' => $membership->payment_method === 'duitku'
+                ? ($membership->paid_at ?? $now)
+                : $membership->paid_at,
+            'duitku_reference' => $duitkuResult['reference'] ?? $membership->duitku_reference,
+            'payment_url' => $membership->payment_method === 'duitku'
+                ? null
+                : $membership->payment_url,
         ]);
 
         $this->starsender->send(
