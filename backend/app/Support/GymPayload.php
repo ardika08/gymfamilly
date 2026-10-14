@@ -29,14 +29,19 @@ class GymPayload
             return null;
         }
 
+        $membership->loadMissing('package');
+        $hourBased = (bool) $membership->package?->durasi_jam;
+        $dateFormat = $hourBased ? 'Y-m-d H:i' : 'Y-m-d';
+
         return [
             'id' => $membership->id,
             'user_id' => $membership->user_id,
             'package_id' => $membership->package_id,
             'created_at' => optional($membership->created_at)->toISOString(),
-            'tanggal_mulai' => $membership->tanggal_mulai?->format('Y-m-d'),
-            'tanggal_berakhir' => $membership->tanggal_berakhir?->format('Y-m-d'),
+            'tanggal_mulai' => $membership->tanggal_mulai?->format($dateFormat),
+            'tanggal_berakhir' => $membership->tanggal_berakhir?->format($dateFormat),
             'status' => $membership->status,
+            'durasi_jam' => $membership->package?->durasi_jam,
             'payment_method' => $membership->payment_method,
             'payment_channel' => $membership->payment_channel,
             'payment_proof' => $membership->payment_proof

@@ -119,11 +119,15 @@ const parseDateKey = (dateKey: string) => {
   return new Date(year, (month ?? 1) - 1, day ?? 1);
 };
 
+const isHourBasedMembership = (membership: Membership) => Boolean(membership.durasi_jam);
+
 const syncMembershipStatus = (membership: Membership): Membership => {
   if (
     membership.status === 'aktif' &&
     membership.tanggal_berakhir &&
-    membership.tanggal_berakhir < toLocalDateKey()
+    (isHourBasedMembership(membership)
+      ? new Date(membership.tanggal_berakhir.replace(' ', 'T')).getTime() < Date.now()
+      : membership.tanggal_berakhir < toLocalDateKey())
   ) {
     return {
       ...membership,
@@ -135,13 +139,22 @@ const syncMembershipStatus = (membership: Membership): Membership => {
 };
 
 const getMembershipDaysRemaining = (membership: Membership) => {
-  if (!membership.tanggal_berakhir) {
+  if (!membership.tanggal_berakhir || isHourBasedMembership(membership)) {
     return null;
   }
 
   const endDate = parseDateKey(membership.tanggal_berakhir);
   const today = parseDateKey(toLocalDateKey());
   return Math.round((endDate.getTime() - today.getTime()) / 86400000);
+};
+
+const getMembershipHoursRemaining = (membership: Membership) => {
+  if (!membership.tanggal_berakhir || !isHourBasedMembership(membership)) {
+    return null;
+  }
+
+  const end = new Date(membership.tanggal_berakhir.replace(' ', 'T')).getTime();
+  return Math.max(0, Math.ceil((end - Date.now()) / 3600000));
 };
 
 const unwrap = async <T,>(response: Response): Promise<T> => {
@@ -567,12 +580,22 @@ export const membershipHelpers = {
 
     return getMembershipDaysRemaining(syncMembershipStatus(membership));
   },
+  getHoursRemaining(membership: Membership | null) {
+    if (!membership) {
+      return null;
+    }
+
+    return getMembershipHoursRemaining(syncMembershipStatus(membership));
+  },
   isExpiringSoon(membership: Membership | null) {
     if (!membership) {
       return false;
     }
 
     const normalized = syncMembershipStatus(membership);
+    if (isHourBasedMembership(normalized)) {
+      return false;
+    }
     const daysRemaining = getMembershipDaysRemaining(normalized);
     return normalized.status === 'aktif' && daysRemaining !== null && daysRemaining <= 3;
   },

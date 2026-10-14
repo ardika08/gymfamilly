@@ -16,14 +16,7 @@ class AdminPackageController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'nama_paket' => ['required', 'string', 'max:255'],
-            'promo_label' => ['nullable', 'string', 'max:255'],
-            'harga_normal' => ['required', 'integer', 'min:0'],
-            'harga_promo' => ['nullable', 'integer', 'min:0'],
-            'deskripsi' => ['nullable', 'string', 'max:2000'],
-            'durasi_hari' => ['required', 'integer', 'min:1'],
-        ]);
+        $validated = $this->validatePackage($request);
 
         $package = GymPackage::create($validated);
 
@@ -32,14 +25,7 @@ class AdminPackageController extends Controller
 
     public function update(Request $request, GymPackage $package)
     {
-        $validated = $request->validate([
-            'nama_paket' => ['required', 'string', 'max:255'],
-            'promo_label' => ['nullable', 'string', 'max:255'],
-            'harga_normal' => ['required', 'integer', 'min:0'],
-            'harga_promo' => ['nullable', 'integer', 'min:0'],
-            'deskripsi' => ['nullable', 'string', 'max:2000'],
-            'durasi_hari' => ['required', 'integer', 'min:1'],
-        ]);
+        $validated = $this->validatePackage($request);
 
         $package->update($validated);
 
@@ -51,5 +37,36 @@ class AdminPackageController extends Controller
         $package->delete();
 
         return ApiResponse::success(true, 'Paket berhasil dihapus.');
+    }
+
+    /**
+     * Validasi paket. Durasi bisa dinyatakan dalam hari (durasi_hari) atau
+     * jam (durasi_jam) — minimal salah satu wajib terisi.
+     */
+    private function validatePackage(Request $request): array
+    {
+        // Normalisasi: input kosong / 0 (kiriman form) dianggap null.
+        $request->merge([
+            'durasi_hari' => $request->input('durasi_hari') ?: null,
+            'durasi_jam'  => $request->input('durasi_jam') ?: null,
+        ]);
+
+        $validated = $request->validate([
+            'nama_paket' => ['required', 'string', 'max:255'],
+            'promo_label' => ['nullable', 'string', 'max:255'],
+            'harga_normal' => ['required', 'integer', 'min:0'],
+            'harga_promo' => ['nullable', 'integer', 'min:0'],
+            'deskripsi' => ['nullable', 'string', 'max:2000'],
+            'durasi_hari' => ['nullable', 'integer', 'min:1'],
+            'durasi_jam' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        if (empty($validated['durasi_hari']) && empty($validated['durasi_jam'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'durasi_hari' => ['Isi durasi hari ATAU durasi jam.'],
+            ]);
+        }
+
+        return $validated;
     }
 }

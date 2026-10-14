@@ -29,21 +29,22 @@ class AdminController extends Controller
     public function dashboard()
     {
         $today = Carbon::today();
+        $now = now();
 
         $activeMembers = Membership::where('status', 'aktif')
-            ->whereDate('tanggal_berakhir', '>=', $today)
+            ->where('tanggal_berakhir', '>=', $now)
             ->distinct('user_id')
             ->count('user_id');
 
         $monthlyRevenue = Membership::where('status', 'aktif')
-            ->whereDate('tanggal_berakhir', '>=', $today)
+            ->where('tanggal_berakhir', '>=', $now)
             ->join('packages', 'memberships.package_id', '=', 'packages.id')
             ->selectRaw('SUM(COALESCE(packages.harga_promo, packages.harga_normal)) as total')
             ->value('total') ?? 0;
 
         $expiringSoonCount = Membership::where('status', 'aktif')
-            ->whereDate('tanggal_berakhir', '>=', $today)
-            ->whereDate('tanggal_berakhir', '<=', $today->copy()->addDays(3))
+            ->where('tanggal_berakhir', '>=', $now)
+            ->where('tanggal_berakhir', '<=', $now->copy()->addDays(3))
             ->distinct('user_id')
             ->count('user_id');
 
@@ -169,7 +170,7 @@ class AdminController extends Controller
         $now = now();
         $membership->update([
             'status' => 'aktif',
-            'tanggal_mulai' => $now->format('Y-m-d'),
+            'tanggal_mulai' => $now->format('Y-m-d H:i:s'),
             'tanggal_berakhir' => $this->memberships->calculateEndDate($membership->package),
             'verified_at' => $now,
             'paid_at' => $membership->payment_method === 'duitku'
@@ -251,16 +252,16 @@ class AdminController extends Controller
 
     public function expiringMembers()
     {
-        $today = Carbon::today();
-        $threshold = $today->copy()->addDays(3);
+        $now = now();
+        $threshold = $now->copy()->addDays(3);
 
         $members = User::query()->where('role', 'member')->get();
 
-        $result = $members->map(function (User $user) use ($today, $threshold) {
+        $result = $members->map(function (User $user) use ($now, $threshold) {
             $membership = $user->memberships()
                 ->where('status', 'aktif')
-                ->whereDate('tanggal_berakhir', '>=', $today)
-                ->whereDate('tanggal_berakhir', '<=', $threshold)
+                ->where('tanggal_berakhir', '>=', $now)
+                ->where('tanggal_berakhir', '<=', $threshold)
                 ->latest('id')
                 ->first();
 
@@ -268,7 +269,7 @@ class AdminController extends Controller
                 'member'     => GymPayload::user($user),
                 'membership' => $membership ? [
                     'id'                => $membership->id,
-                    'tanggal_berakhir'  => $membership->tanggal_berakhir?->format('Y-m-d'),
+                    'tanggal_berakhir'  => $membership->tanggal_berakhir?->format('Y-m-d H:i'),
                     'status'            => $membership->status,
                 ] : null,
             ];

@@ -17,6 +17,7 @@ export const AdminPackagesPage = () => {
     harga_promo: '',
     deskripsi: '',
     durasi_hari: '',
+    durasi_jam: '',
   });
   usePageTitle('Kelola Paket');
 
@@ -37,6 +38,7 @@ export const AdminPackagesPage = () => {
       harga_promo: '',
       deskripsi: '',
       durasi_hari: '',
+      durasi_jam: '',
     });
   };
 
@@ -49,7 +51,8 @@ export const AdminPackagesPage = () => {
       harga_normal: Number(form.harga_normal),
       harga_promo: form.harga_promo ? Number(form.harga_promo) : null,
       deskripsi: form.deskripsi.trim() || null,
-      durasi_hari: Number(form.durasi_hari),
+      durasi_hari: form.durasi_hari ? Number(form.durasi_hari) : null,
+      durasi_jam: form.durasi_jam ? Number(form.durasi_jam) : null,
     });
     resetForm();
     refresh();
@@ -139,9 +142,19 @@ export const AdminPackagesPage = () => {
                 type="number"
                 min="1"
                 placeholder="30"
-                required
               />
-              <small>Berapa hari membership aktif setelah pembayaran berhasil.</small>
+              <small>Isi ini ATAU durasi jam di samping. Untuk paket harian/bulanan.</small>
+            </label>
+            <label>
+              <span>Durasi (jam) — opsional</span>
+              <input
+                value={form.durasi_jam}
+                onChange={(event) => setForm({ ...form, durasi_jam: event.target.value })}
+                type="number"
+                min="1"
+                placeholder="12"
+              />
+              <small>Untuk paket berbasis jam (mis. Harian 12 Jam). Lebih diutamakan dari hari.</small>
             </label>
             <div className="form-actions-row field-span-2">
               <button type="submit" className="button-primary">
@@ -185,7 +198,8 @@ export const AdminPackagesPage = () => {
                           harga_normal: String(item.harga_normal),
                           harga_promo: item.harga_promo ? String(item.harga_promo) : '',
                           deskripsi: item.deskripsi ?? '',
-                          durasi_hari: String(item.durasi_hari ?? 30),
+                          durasi_hari: item.durasi_hari ? String(item.durasi_hari) : '',
+                          durasi_jam: item.durasi_jam ? String(item.durasi_jam) : '',
                         });
                         setOpenMenuId(null);
                         window.scrollTo({ top: 0, behavior: 'smooth' });

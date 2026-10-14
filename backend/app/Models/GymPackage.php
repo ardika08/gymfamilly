@@ -19,6 +19,7 @@ class GymPackage extends Model
         'harga_promo',
         'deskripsi',
         'durasi_hari',
+        'durasi_jam',
     ];
 
     public function memberships(): HasMany

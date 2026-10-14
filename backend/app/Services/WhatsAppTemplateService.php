@@ -22,14 +22,20 @@ class WhatsAppTemplateService
 
     public function paymentVerified(User $user, Membership $membership, GymPackage $package): string
     {
-        $startDate = $this->formatDate($membership->tanggal_mulai);
-        $endDate   = $this->formatDate($membership->tanggal_berakhir);
+        $hourBased = (bool) $package->durasi_jam;
+        $startDate = $hourBased
+            ? $this->formatDateTime($membership->tanggal_mulai)
+            : $this->formatDate($membership->tanggal_mulai);
+        $endDate = $hourBased
+            ? $this->formatDateTime($membership->tanggal_berakhir)
+            : $this->formatDate($membership->tanggal_berakhir);
+        $durasi = $hourBased ? "{$package->durasi_jam} jam" : "{$package->durasi_hari} hari";
         $loginUrl  = rtrim((string) config('app.frontend_url', ''), '/').'/login';
 
         return $this->compose(
             "Halo {$user->nama},",
             "Pembayaran membership Anda telah kami terima! 🎉",
-            "📦 *Detail Membership:*\n• Paket: *{$package->nama_paket}*\n• Durasi: *{$package->durasi_hari} hari*\n• Mulai: *{$startDate}*\n• Berakhir: *{$endDate}*",
+            "📦 *Detail Membership:*\n• Paket: *{$package->nama_paket}*\n• Durasi: *{$durasi}*\n• Mulai: *{$startDate}*\n• Berakhir: *{$endDate}*",
             "Silakan login ke dashboard Gym Familly:\n{$loginUrl}\n\n🔑 Email: {$user->email}\n🔑 Password: (password yang Anda daftarkan)",
             'Tunjukkan QR code saat check-in di Gym Familly.',
         );

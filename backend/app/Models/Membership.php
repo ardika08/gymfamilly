@@ -29,8 +29,8 @@ class Membership extends Model
     ];
 
     protected $casts = [
-        'tanggal_mulai' => 'date:Y-m-d',
-        'tanggal_berakhir' => 'date:Y-m-d',
+        'tanggal_mulai' => 'datetime',
+        'tanggal_berakhir' => 'datetime',
         'verified_at' => 'datetime',
         'paid_at' => 'datetime',
     ];

@@ -24,7 +24,8 @@ export interface GymPackage {
   harga_normal: number;
   harga_promo?: number | null;
   deskripsi?: string | null;
-  durasi_hari: number;
+  durasi_hari?: number | null;
+  durasi_jam?: number | null;
 }
 
 export interface Membership {
@@ -35,6 +36,7 @@ export interface Membership {
   tanggal_mulai?: string | null;
   tanggal_berakhir?: string | null;
   status: MembershipStatus;
+  durasi_jam?: number | null;
   payment_method?: string | null;
   payment_channel?: string | null;
   payment_proof?: string | null;

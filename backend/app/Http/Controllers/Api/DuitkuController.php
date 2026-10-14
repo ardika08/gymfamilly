@@ -209,7 +209,7 @@ class DuitkuController extends Controller
     {
         $membership->update([
             'status'           => 'aktif',
-            'tanggal_mulai'    => now()->format('Y-m-d'),
+            'tanggal_mulai'    => now()->format('Y-m-d H:i:s'),
             'tanggal_berakhir' => $this->memberships->calculateEndDate($membership->package),
             'duitku_reference' => $reference,
             'verified_at'      => now(),

@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { membershipHelpers, membershipService, packageService } from '../../services/api';
 import type { GymPackage, Membership } from '../../types/models';
-import { formatDisplayDate } from '../../utils/date';
+import { formatDisplayDate, formatDisplayDateTime } from '../../utils/date';
 
 export const MemberBarcodePage = () => {
   const { user } = useAuth();
@@ -50,6 +50,8 @@ export const MemberBarcodePage = () => {
 
   const isExpiringSoon = membershipHelpers.isExpiringSoon(membership);
   const daysRemaining = membershipHelpers.getDaysRemaining(membership);
+  const hoursRemaining = membershipHelpers.getHoursRemaining(membership);
+  const isHourBased = Boolean(currentPackage?.durasi_jam);
 
   if (!membership) {
     return (
@@ -182,11 +184,15 @@ export const MemberBarcodePage = () => {
             </div>
             <div className="barcode-side-card">
               <span>Sisa masa aktif</span>
-              <strong>{daysRemaining ?? '-'} hari</strong>
+              <strong>{isHourBased ? `${hoursRemaining ?? '-'} jam` : `${daysRemaining ?? '-'} hari`}</strong>
             </div>
             <div className="barcode-side-card">
               <span>Berlaku sampai</span>
-              <strong>{formatDisplayDate(membership.tanggal_berakhir)}</strong>
+              <strong>
+                {isHourBased
+                  ? formatDisplayDateTime(membership.tanggal_berakhir)
+                  : formatDisplayDate(membership.tanggal_berakhir)}
+              </strong>
             </div>
           </div>
           <div className="barcode-side-note">
